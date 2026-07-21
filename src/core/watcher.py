@@ -121,11 +121,13 @@ class FolderWatcher:
             # Kelompokkan aturan berdasarkan watch_folder untuk menghindari duplikasi
             folder_handlers: dict[str, list[_RuleHandler]] = {}
             for rule in enabled_rules:
-                folder = rule.get("watch_folder", "")
-                if not folder or not os.path.isdir(folder):
-                    logger.warning("Skipping invalid watch folder: %s", folder)
-                    continue
-                folder_handlers.setdefault(folder, []).append(_RuleHandler(rule))
+                folders_raw = rule.get("watch_folder", "")
+                watch_folders = [w.strip() for w in folders_raw.split(",") if w.strip()]
+                for folder in watch_folders:
+                    if not folder or not os.path.isdir(folder):
+                        logger.warning("Skipping invalid watch folder: %s", folder)
+                        continue
+                    folder_handlers.setdefault(folder, []).append(_RuleHandler(rule))
 
             for folder, handlers in folder_handlers.items():
                 for handler in handlers:

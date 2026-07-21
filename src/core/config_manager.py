@@ -16,10 +16,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 # ------------------------------------------------------------------
-# Default path for the config file, stored next to the executable/script
-# Jalur default untuk file konfigurasi, disimpan di samping executable/script
+# Default path for the config file, stored in AppData for permanence
+# Jalur default untuk file konfigurasi, disimpan di AppData agar permanen
 # ------------------------------------------------------------------
-_APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if os.name == 'nt':
+    _APP_DIR = os.path.join(os.environ.get('APPDATA', os.path.expanduser('~')), "AutoFileOrganizer")
+else:
+    _APP_DIR = os.path.join(os.path.expanduser('~'), ".autofileorganizer")
 DEFAULT_CONFIG_PATH = os.path.join(_APP_DIR, "config.json")
 
 # ------------------------------------------------------------------
@@ -74,6 +77,8 @@ def _default_settings() -> dict:
     return {
         "auto_start": False,
         "minimize_to_tray_on_close": True,
+        "theme": "dark",
+        "language": "id",
     }
 
 
@@ -99,6 +104,11 @@ def load_config(path: str = DEFAULT_CONFIG_PATH) -> dict:
                 data["rules"] = _default_rules()
             if "settings" not in data:
                 data["settings"] = _default_settings()
+            else:
+                defaults = _default_settings()
+                for k, v in defaults.items():
+                    if k not in data["settings"]:
+                        data["settings"][k] = v
             return data
         except (json.JSONDecodeError, IOError) as exc:
             logger.warning("Failed to read config (%s), regenerating defaults.", exc)

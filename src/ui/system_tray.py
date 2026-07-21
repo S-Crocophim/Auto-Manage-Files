@@ -16,6 +16,9 @@ from PIL import Image, ImageDraw
 import pystray
 from pystray import MenuItem as item
 
+from src.ui.i18n import Translator
+from src.core import config_manager
+
 logger = logging.getLogger(__name__)
 
 
@@ -72,11 +75,19 @@ class SystemTray:
 
     def start(self) -> None:
         """Start the tray icon in a daemon thread / Mulai ikon tray di thread daemon."""
+        
+        try:
+            conf = config_manager.load_config()
+            lang = conf.get("settings", {}).get("language", "id")
+        except Exception:
+            lang = "id"
+        t = Translator(lang)
+        
         menu = pystray.Menu(
-            item("⚙️  Buka Pengaturan", lambda icon, _: self._on_open()),
-            item("🗂️  Rapihkan Sekarang (Manual)", lambda icon, _: self._on_manual()),
+            item(t.get("tray_open"), lambda icon, _: self._on_open()),
+            item(t.get("tray_manual"), lambda icon, _: self._on_manual()),
             pystray.Menu.SEPARATOR,
-            item("❌  Keluar", lambda icon, _: self._on_quit()),
+            item(t.get("tray_quit"), lambda icon, _: self._on_quit()),
         )
 
         self._icon = pystray.Icon(

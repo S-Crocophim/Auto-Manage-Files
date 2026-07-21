@@ -11,6 +11,7 @@ mengirim notifikasi toast Windows melalui winotify.
 """
 
 import os
+import sys
 import shutil
 import time
 import logging
@@ -24,24 +25,41 @@ logger = logging.getLogger(__name__)
 try:
     # pyrefly: ignore [missing-import]
     from winotify import Notification, audio
+    from src.ui.i18n import Translator
+    from src.core import config_manager
     _WINOTIFY_AVAILABLE = True
 except ImportError:
     _WINOTIFY_AVAILABLE = False
     logger.warning("winotify not available – notifications disabled.")
 
 
-def _send_notification(title: str, message: str) -> None:
+def _send_notification(title_key: str, msg_key: str, msg_arg: str = "") -> None:
     """
     Send a Windows 10/11 toast notification.
     Mengirim notifikasi toast Windows 10/11.
     """
-    if not _WINOTIFY_AVAILABLE:
+    if not _WINOTIFY_AVAILABLE or sys.platform != "win32":
         return
+
+    # Load current language from config
+    try:
+        conf = config_manager.load_config()
+        lang = conf.get("settings", {}).get("language", "id")
+    except Exception:
+        lang = "id"
+    t = Translator(lang)
+
+    title = t.get(title_key) if title_key else ""
+    if msg_key:
+        msg = f"{t.get(msg_key)} {msg_arg}".strip() if msg_arg else t.get(msg_key)
+    else:
+        msg = msg_arg
+
     try:
         toast = Notification(
             app_id="Auto File Organizer",
             title=title,
-            msg=message,
+            msg=msg,
             duration="short",
         )
         toast.set_audio(audio.Default, loop=False)
@@ -108,10 +126,7 @@ def move_file_safely(
             logger.info("Moved: %s → %s", filename, dest_path)
 
             if notify:
-                _send_notification(
-                    "✨ File Dipindahkan!",
-                    f"📁 {final_name}\n📂 → {dest_folder}",
-                )
+                _send_notification("notif_success_title", "", f"📁 {filename}\nKe: {dest_folder}")
             return True
 
         except PermissionError:
@@ -126,19 +141,13 @@ def move_file_safely(
             else:
                 logger.error("Failed to move (locked after %d retries): %s", max_retries, src_path)
                 if notify:
-                    _send_notification(
-                        "⚠️ Gagal Dipindahkan (Terkunci)",
-                        f"📁 {filename}\nMasih digunakan oleh aplikasi lain.",
-                    )
+                    _send_notification("notif_err_lock_title", "notif_err_lock_msg")
                 return False
 
         except Exception as exc:
             logger.error("Unexpected error moving %s: %s", src_path, exc)
             if notify:
-                _send_notification(
-                    "❌ Gagal Dipindahkan (Error)",
-                    f"📁 {filename}\nError: {exc}",
-                )
+                _send_notification("notif_err_title", "notif_err_msg", str(exc))
             return False
 
     return False
@@ -181,33 +190,33 @@ def run_manual_organization(rules: list[dict], notify: bool = True) -> int:
             if ext.strip()
         }
 
-        if not os.path.isdir(watch_folder):
-            logger.warning("Watch folder does not exist: %s", watch_folder)
-            continue
+        watch_folders = [w.strip() for w in watch_folder.split(",") if w.strip()]
 
-        try:
-            entries = os.listdir(watch_folder)
-        except OSError as exc:
-            logger.error("Cannot list %s: %s", watch_folder, exc)
-            continue
-
-        for entry in entries:
-            full_path = os.path.join(watch_folder, entry)
-            if not os.path.isfile(full_path):
+        for wf in watch_folders:
+            if not os.path.isdir(wf):
+                logger.warning("Watch folder does not exist: %s", wf)
                 continue
 
-            _, ext = os.path.splitext(entry)
-            if ext.lower() in extensions:
-                if move_file_safely(full_path, dest_folder, notify=notify):
-                    total_moved += 1
+            try:
+                entries = os.listdir(wf)
+            except OSError as exc:
+                logger.error("Cannot list %s: %s", wf, exc)
+                continue
+
+            for entry in entries:
+                full_path = os.path.join(wf, entry)
+                if not os.path.isfile(full_path):
+                    continue
+
+                _, ext = os.path.splitext(entry)
+                if ext.lower() in extensions:
+                    if move_file_safely(full_path, dest_folder, notify=notify):
+                        total_moved += 1
 
     logger.info("Manual organization complete – %d file(s) moved.", total_moved)
 
     if total_moved == 0 and notify:
-        _send_notification(
-            "📂 Organisasi Selesai",
-            "Tidak ada file yang perlu dipindahkan.",
-        )
+        _send_notification("notif_done_title", "notif_done_msg")
 
     return total_moved
 

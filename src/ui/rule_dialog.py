@@ -2,10 +2,10 @@
 rule_dialog.py
 --------------
 Modal dialog (CTkToplevel) for adding or editing a file-organization rule.
-Uses the monochrome Black & White design language.
+Supports Dark / Light themes via parent palette.
 
 Dialog modal (CTkToplevel) untuk menambahkan atau mengedit aturan organisasi file.
-Menggunakan bahasa desain monokrom Hitam & Putih.
+Mendukung tema Gelap / Terang melalui palet parent.
 """
 
 import os
@@ -17,27 +17,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# ------------------------------------------------------------------
-# Colour palette (monochrome)
-# ------------------------------------------------------------------
-_BG_DARK = "#111111"
-_BG_CARD = "#1a1a1a"
-_BG_INPUT = "#2b2b2b"
-_FG_WHITE = "#ffffff"
-_FG_GREY = "#aaaaaa"
-_FG_LABEL = "#cccccc"
-_ACCENT = "#333333"
-_HOVER = "#3a3a3a"
-_BORDER = "#444444"
-_BTN_PRIMARY_BG = "#ffffff"
-_BTN_PRIMARY_FG = "#111111"
-_BTN_PRIMARY_HOVER = "#dddddd"
-_BTN_CANCEL_BG = "#2b2b2b"
-_BTN_CANCEL_FG = "#ffffff"
-_BTN_CANCEL_HOVER = "#3a3a3a"
-_DELETE_RED = "#c0392b"
-_DELETE_RED_HOVER = "#a93226"
 
+from src.ui.theme import _PALETTE
 
 class RuleDialog(ctk.CTkToplevel):
     """
@@ -50,14 +31,19 @@ class RuleDialog(ctk.CTkToplevel):
 
     def __init__(self, parent, rule: dict | None = None):
         super().__init__(parent)
+        self.t = parent._translator
+        # Grab the palette from the imported module
+        self.P = _PALETTE
 
         self.result: dict | None = None
         self._editing = rule is not None
         self._rule_id = rule["id"] if rule else uuid.uuid4().hex[:8]
 
+        P = self.P
+
         # ---- window config ----
-        self.title("Edit Aturan" if self._editing else "Tambah Aturan Baru")
-        self.configure(fg_color=_BG_DARK)
+        self.title(self.t.get("rule_title_edit") if self._editing else self.t.get("rule_title_add"))
+        self.configure(fg_color=P["bg_main"])
         self.geometry("520x520")
         self.resizable(False, False)
         self.transient(parent)
@@ -81,81 +67,83 @@ class RuleDialog(ctk.CTkToplevel):
     # ------------------------------------------------------------------
 
     def _build_ui(self, rule: dict | None) -> None:
+        P = self.P
+        t = self.t
         pad = {"padx": 24, "pady": (8, 0)}
 
         # ---------- Title ----------
-        title_text = "✏️  Edit Aturan" if self._editing else "➕  Aturan Baru"
+        title_text = t.get("rule_title_edit") if self._editing else t.get("rule_title_add")
         ctk.CTkLabel(
             self, text=title_text, font=ctk.CTkFont(size=20, weight="bold"),
-            text_color=_FG_WHITE, anchor="w",
+            text_color=P["fg_primary"], anchor="w",
         ).pack(fill="x", padx=24, pady=(24, 16))
 
         # ---------- Separator ----------
-        sep = ctk.CTkFrame(self, height=1, fg_color=_BORDER)
+        sep = ctk.CTkFrame(self, height=1, fg_color=P["border"])
         sep.pack(fill="x", padx=24, pady=(0, 12))
 
         # ---------- Name ----------
         ctk.CTkLabel(
-            self, text="Nama Aturan", font=ctk.CTkFont(size=13),
-            text_color=_FG_LABEL, anchor="w",
+            self, text=t.get("rule_name"), font=ctk.CTkFont(size=13),
+            text_color=P["fg_label"], anchor="w",
         ).pack(fill="x", **pad)
         self._name_entry = ctk.CTkEntry(
             self, height=38, corner_radius=8,
-            fg_color=_BG_INPUT, border_color=_BORDER, text_color=_FG_WHITE,
-            placeholder_text="Contoh: Spreadsheets",
-            placeholder_text_color=_FG_GREY,
+            fg_color=P["bg_input"], border_color=P["border"], text_color=P["fg_primary"],
+            placeholder_text=t.get("rule_name_ph"),
+            placeholder_text_color=P["fg_secondary"],
         )
         self._name_entry.pack(fill="x", padx=24, pady=(4, 0))
 
         # ---------- Watch Folder ----------
         ctk.CTkLabel(
-            self, text="Folder Dipantau", font=ctk.CTkFont(size=13),
-            text_color=_FG_LABEL, anchor="w",
+            self, text=t.get("rule_watch"), font=ctk.CTkFont(size=13),
+            text_color=P["fg_label"], anchor="w",
         ).pack(fill="x", **pad)
         wf_frame = ctk.CTkFrame(self, fg_color="transparent")
         wf_frame.pack(fill="x", padx=24, pady=(4, 0))
         self._watch_entry = ctk.CTkEntry(
             wf_frame, height=38, corner_radius=8,
-            fg_color=_BG_INPUT, border_color=_BORDER, text_color=_FG_WHITE,
-            placeholder_text_color=_FG_GREY,
+            fg_color=P["bg_input"], border_color=P["border"], text_color=P["fg_primary"],
+            placeholder_text_color=P["fg_secondary"],
         )
         self._watch_entry.pack(side="left", fill="x", expand=True, padx=(0, 8))
         ctk.CTkButton(
             wf_frame, text="📂", width=42, height=38, corner_radius=8,
-            fg_color=_ACCENT, hover_color=_HOVER, text_color=_FG_WHITE,
-            command=lambda: self._browse(self._watch_entry),
+            fg_color=P["accent"], hover_color=P["hover"], text_color=P["fg_primary"],
+            command=lambda: self._browse(self._watch_entry, append=True),
         ).pack(side="right")
 
         # ---------- Extensions ----------
         ctk.CTkLabel(
-            self, text="Ekstensi (pisahkan koma)", font=ctk.CTkFont(size=13),
-            text_color=_FG_LABEL, anchor="w",
+            self, text=t.get("rule_ext"), font=ctk.CTkFont(size=13),
+            text_color=P["fg_label"], anchor="w",
         ).pack(fill="x", **pad)
         self._ext_entry = ctk.CTkEntry(
             self, height=38, corner_radius=8,
-            fg_color=_BG_INPUT, border_color=_BORDER, text_color=_FG_WHITE,
-            placeholder_text=".xlsx, .csv, .pdf",
-            placeholder_text_color=_FG_GREY,
+            fg_color=P["bg_input"], border_color=P["border"], text_color=P["fg_primary"],
+            placeholder_text=t.get("rule_ext_ph"),
+            placeholder_text_color=P["fg_secondary"],
         )
         self._ext_entry.pack(fill="x", padx=24, pady=(4, 0))
 
         # ---------- Destination Folder ----------
         ctk.CTkLabel(
-            self, text="Folder Tujuan", font=ctk.CTkFont(size=13),
-            text_color=_FG_LABEL, anchor="w",
+            self, text=t.get("rule_dest"), font=ctk.CTkFont(size=13),
+            text_color=P["fg_label"], anchor="w",
         ).pack(fill="x", **pad)
         df_frame = ctk.CTkFrame(self, fg_color="transparent")
         df_frame.pack(fill="x", padx=24, pady=(4, 0))
         self._dest_entry = ctk.CTkEntry(
             df_frame, height=38, corner_radius=8,
-            fg_color=_BG_INPUT, border_color=_BORDER, text_color=_FG_WHITE,
-            placeholder_text_color=_FG_GREY,
+            fg_color=P["bg_input"], border_color=P["border"], text_color=P["fg_primary"],
+            placeholder_text_color=P["fg_secondary"],
         )
         self._dest_entry.pack(side="left", fill="x", expand=True, padx=(0, 8))
         ctk.CTkButton(
             df_frame, text="📂", width=42, height=38, corner_radius=8,
-            fg_color=_ACCENT, hover_color=_HOVER, text_color=_FG_WHITE,
-            command=lambda: self._browse(self._dest_entry),
+            fg_color=P["accent"], hover_color=P["hover"], text_color=P["fg_primary"],
+            command=lambda: self._browse(self._dest_entry, append=False),
         ).pack(side="right")
 
         # ---------- Pre-fill if editing ----------
@@ -170,16 +158,16 @@ class RuleDialog(ctk.CTkToplevel):
         btn_frame.pack(fill="x", padx=24, pady=(24, 24))
 
         ctk.CTkButton(
-            btn_frame, text="Batal", width=100, height=40, corner_radius=10,
-            fg_color=_BTN_CANCEL_BG, hover_color=_BTN_CANCEL_HOVER,
-            text_color=_BTN_CANCEL_FG, font=ctk.CTkFont(size=14),
+            btn_frame, text=t.get("rule_btn_cancel"), width=100, height=40, corner_radius=10,
+            fg_color=P["bg_input"], hover_color=P["hover"],
+            text_color=P["fg_primary"], font=ctk.CTkFont(size=14),
             command=self._on_cancel,
         ).pack(side="left")
 
         ctk.CTkButton(
-            btn_frame, text="💾  Simpan", width=140, height=40, corner_radius=10,
-            fg_color=_BTN_PRIMARY_BG, hover_color=_BTN_PRIMARY_HOVER,
-            text_color=_BTN_PRIMARY_FG, font=ctk.CTkFont(size=14, weight="bold"),
+            btn_frame, text=t.get("rule_btn_save"), width=140, height=40, corner_radius=10,
+            fg_color=P["btn_primary_bg"], hover_color=P["btn_primary_hover"],
+            text_color=P["btn_primary_fg"], font=ctk.CTkFont(size=14, weight="bold"),
             command=self._on_save,
         ).pack(side="right")
 
@@ -188,10 +176,14 @@ class RuleDialog(ctk.CTkToplevel):
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _browse(entry_widget: ctk.CTkEntry) -> None:
+    def _browse(entry_widget: ctk.CTkEntry, append: bool = False) -> None:
         """Open a folder browser dialog / Buka dialog penjelajah folder."""
         folder = filedialog.askdirectory()
         if folder:
+            if append:
+                current = entry_widget.get().strip()
+                if current:
+                    folder = current + ", " + folder
             entry_widget.delete(0, "end")
             entry_widget.insert(0, folder)
 
@@ -203,10 +195,10 @@ class RuleDialog(ctk.CTkToplevel):
 
         # Basic validation / Validasi dasar
         if not name or not watch or not exts or not dest:
-            # Flash a simple warning – keep it lightweight
-            self.title("⚠️  Semua field harus diisi!")
+            # Flash a simple warning
+            self.title(self.t.get("rule_warn_empty"))
             self.after(2000, lambda: self.title(
-                "Edit Aturan" if self._editing else "Tambah Aturan Baru"
+                self.t.get("rule_title_edit") if self._editing else self.t.get("rule_title_add")
             ))
             return
 
