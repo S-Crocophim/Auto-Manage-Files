@@ -47,16 +47,15 @@ if os.path.isfile(ICON_PATH):
     cmd_full += ["--icon", ICON_PATH]
 cmd_full += ["--hidden-import", "pystray._win32", "--hidden-import", "winotify", "--hidden-import", "customtkinter", ENTRY_POINT]
 result = subprocess.run(cmd_full, cwd=os.path.dirname(os.path.abspath(__file__)))
-
 if result.returncode == 0:
     print("\n" + "=" * 60)
-    print("  ✅ All Builds Successful!")
+    print("  [SUCCESS] All Builds Successful!")
     print("  Portable: dist/AutoFileOrganizer_Portable.exe")
     print("  Full Dir: dist/AutoFileOrganizer_Full/")
     print("=" * 60)
 else:
     print("\n" + "=" * 60)
-    print(f"  ❌ Build failed with exit code {result.returncode}")
+    print(f"  [ERROR] Build failed with exit code {result.returncode}")
     print("=" * 60)
 
 sys.exit(result.returncode)
