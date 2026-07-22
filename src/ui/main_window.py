@@ -260,28 +260,6 @@ class MainWindow(ctk.CTk):
             width=44, height=22,
         ).pack(side="right")
 
-        # ---------- Export / Import Settings ----------
-        imp_exp_frame = ctk.CTkFrame(bottom_frame, fg_color="transparent")
-        imp_exp_frame.pack(fill="x", padx=20, pady=(4, 4))
-        
-        btn_export = ctk.CTkButton(
-            imp_exp_frame, text=t.get("nav_export_settings"), height=28, corner_radius=8,
-            fg_color=P["bg_input"], hover_color=P["hover"],
-            text_color=P["fg_primary"], font=ctk.CTkFont(size=11),
-            command=self._export_settings,
-        )
-        btn_export.pack(side="left", fill="x", expand=True, padx=(0, 4))
-        self._register_text(btn_export, "nav_export_settings")
-
-        btn_import = ctk.CTkButton(
-            imp_exp_frame, text=t.get("nav_import_settings"), height=28, corner_radius=8,
-            fg_color=P["bg_input"], hover_color=P["hover"],
-            text_color=P["fg_primary"], font=ctk.CTkFont(size=11),
-            command=self._import_settings,
-        )
-        btn_import.pack(side="right", fill="x", expand=True, padx=(4, 0))
-        self._register_text(btn_import, "nav_import_settings")
-
         # ---------- Watermark ----------
         watermark_lbl = ctk.CTkLabel(
             bottom_frame, text=t.get("watermark_credit"),
@@ -342,6 +320,28 @@ class MainWindow(ctk.CTk):
         make_tab("nav_logs", self._show_logs)
         make_tab("nav_tutorial", self._show_tutorial)
         make_tab("nav_about", self._show_about)
+
+        # ---------- Export / Import Settings ----------
+        imp_exp_frame = ctk.CTkFrame(self._top_bar, fg_color="transparent")
+        imp_exp_frame.pack(side="right", padx=10, pady=8)
+
+        btn_import = ctk.CTkButton(
+            imp_exp_frame, text=self._translator.get("nav_import_settings"), height=28, corner_radius=8,
+            fg_color=P["bg_input"], hover_color=P["hover"],
+            text_color=P["fg_primary"], font=ctk.CTkFont(size=11),
+            command=self._import_settings, width=100
+        )
+        btn_import.pack(side="right", padx=(4, 0))
+        self._register_text(btn_import, "nav_import_settings")
+
+        btn_export = ctk.CTkButton(
+            imp_exp_frame, text=self._translator.get("nav_export_settings"), height=28, corner_radius=8,
+            fg_color=P["bg_input"], hover_color=P["hover"],
+            text_color=P["fg_primary"], font=ctk.CTkFont(size=11),
+            command=self._export_settings, width=100
+        )
+        btn_export.pack(side="right", padx=(0, 4))
+        self._register_text(btn_export, "nav_export_settings")
 
         # Container for all views
         self._container = ctk.CTkFrame(main_right, fg_color=P["bg_main"], corner_radius=0)
