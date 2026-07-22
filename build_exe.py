@@ -22,47 +22,40 @@ APP_NAME = "AutoFileOrganizer"
 ENTRY_POINT = os.path.join("src", "main.py")
 ICON_PATH = os.path.join("src", "assets", "app.ico")  # optional
 
-# Build command / Perintah build
-cmd = [
+# Build Portable
+print("Building Portable...")
+cmd_portable = [
     sys.executable, "-m", "PyInstaller",
-    "--noconfirm",
-    "--onefile",
-    "--windowed",          # no console window
-    "--name", APP_NAME,
-    "--clean",
+    "--noconfirm", "--onefile", "--windowed",
+    "--name", "AutoFileOrganizer_Portable",
+    "--clean"
 ]
-
-# Add icon if it exists / Tambahkan ikon jika ada
 if os.path.isfile(ICON_PATH):
-    cmd += ["--icon", ICON_PATH]
+    cmd_portable += ["--icon", ICON_PATH]
+cmd_portable += ["--hidden-import", "pystray._win32", "--hidden-import", "winotify", "--hidden-import", "customtkinter", ENTRY_POINT]
+subprocess.run(cmd_portable, cwd=os.path.dirname(os.path.abspath(__file__)))
 
-# Add hidden imports that PyInstaller might miss
-cmd += [
-    "--hidden-import", "pystray._win32",
-    "--hidden-import", "winotify",
-    "--hidden-import", "customtkinter",
+# Build Full Directory
+print("Building Full Directory...")
+cmd_full = [
+    sys.executable, "-m", "PyInstaller",
+    "--noconfirm", "--onedir", "--windowed",
+    "--name", "AutoFileOrganizer_Full",
+    "--clean"
 ]
-
-# Entry point
-cmd.append(ENTRY_POINT)
-
-print("=" * 60)
-print(f"  Building {APP_NAME}")
-print("=" * 60)
-print(f"  Command: {' '.join(cmd)}")
-print()
-
-result = subprocess.run(cmd, cwd=os.path.dirname(os.path.abspath(__file__)))
+if os.path.isfile(ICON_PATH):
+    cmd_full += ["--icon", ICON_PATH]
+cmd_full += ["--hidden-import", "pystray._win32", "--hidden-import", "winotify", "--hidden-import", "customtkinter", ENTRY_POINT]
+result = subprocess.run(cmd_full, cwd=os.path.dirname(os.path.abspath(__file__)))
 
 if result.returncode == 0:
-    print()
-    print("=" * 60)
-    print(f"  ✅ Build successful!")
-    print(f"  Executable: dist/{APP_NAME}.exe")
+    print("\n" + "=" * 60)
+    print("  ✅ All Builds Successful!")
+    print("  Portable: dist/AutoFileOrganizer_Portable.exe")
+    print("  Full Dir: dist/AutoFileOrganizer_Full/")
     print("=" * 60)
 else:
-    print()
-    print("=" * 60)
+    print("\n" + "=" * 60)
     print(f"  ❌ Build failed with exit code {result.returncode}")
     print("=" * 60)
 

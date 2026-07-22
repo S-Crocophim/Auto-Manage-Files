@@ -538,9 +538,8 @@ class MainWindow(ctk.CTk):
         for widget in list(self._scroll.winfo_children()):
             try:
                 widget.pack_forget()
-                for child in widget.winfo_children():
-                    child.destroy()
-                widget.destroy()
+                # Schedule destroy to avoid TclError if events are still pending
+                self.after(100, widget.destroy)
             except Exception:
                 pass
 
