@@ -24,6 +24,14 @@ _TRANSLATIONS = {
         "id": "📄  Logs",
         "en": "📄  Logs"
     },
+    "nav_tutorial": {
+        "id": "📚  Tutorial",
+        "en": "📚  Tutorial"
+    },
+    "nav_about": {
+        "id": "ℹ️  About",
+        "en": "ℹ️  About"
+    },
     "nav_add_rule": {
         "id": "➕  Tambah Aturan",
         "en": "➕  Add Rule"

@@ -151,8 +151,6 @@ class MainWindow(ctk.CTk):
         ctk.CTkFrame(sidebar, height=1, fg_color=P["border"]).pack(fill="x", padx=16, pady=(0, 16))
 
         # ---------- Navigation buttons ----------
-        self._nav_btn(sidebar, "nav_dashboard", self._show_dashboard)
-        self._nav_btn(sidebar, "nav_logs", self._show_logs)
         self._nav_btn(sidebar, "nav_add_rule", self._add_rule)
 
         # ---------- Manual Organize ----------
@@ -295,9 +293,34 @@ class MainWindow(ctk.CTk):
     def _build_main_area(self) -> None:
         P = _PALETTE
         
+        main_right = ctk.CTkFrame(self, fg_color="transparent", corner_radius=0)
+        main_right.pack(side="right", fill="both", expand=True)
+
+        # ---------- TOP BAR ----------
+        self._top_bar = ctk.CTkFrame(main_right, height=50, corner_radius=0, fg_color=P["bg_main"])
+        self._top_bar.pack(side="top", fill="x")
+        
+        tab_container = ctk.CTkFrame(self._top_bar, fg_color="transparent")
+        tab_container.pack(side="left", padx=10, pady=8)
+
+        def make_tab(key, cmd):
+            btn = ctk.CTkButton(
+                tab_container, text=self._translator.get(key), height=32, corner_radius=8,
+                fg_color="transparent", hover_color=P["hover"],
+                text_color=P["fg_primary"], font=ctk.CTkFont(size=13, weight="bold"),
+                command=cmd, width=0,
+            )
+            btn.pack(side="left", padx=4)
+            self._register_text(btn, key)
+
+        make_tab("nav_dashboard", self._show_dashboard)
+        make_tab("nav_logs", self._show_logs)
+        make_tab("nav_tutorial", self._show_tutorial)
+        make_tab("nav_about", self._show_about)
+
         # Container for all views
-        self._container = ctk.CTkFrame(self, fg_color=P["bg_main"], corner_radius=0)
-        self._container.pack(side="right", fill="both", expand=True)
+        self._container = ctk.CTkFrame(main_right, fg_color=P["bg_main"], corner_radius=0)
+        self._container.pack(side="top", fill="both", expand=True)
         
         # Dashboard View
         self._dashboard_frame = ctk.CTkFrame(self._container, fg_color="transparent")
@@ -308,6 +331,16 @@ class MainWindow(ctk.CTk):
         self._logs_frame = ctk.CTkFrame(self._container, fg_color="transparent")
         self._logs_frame.place(relx=0, rely=0, relwidth=1, relheight=1)
         self._build_logs_view()
+        
+        # Tutorial View
+        self._tutorial_frame = ctk.CTkFrame(self._container, fg_color="transparent")
+        self._tutorial_frame.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self._build_tutorial_view()
+
+        # About View
+        self._about_frame = ctk.CTkFrame(self._container, fg_color="transparent")
+        self._about_frame.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self._build_about_view()
         
         # Default view
         self._dashboard_frame.lift()
@@ -396,6 +429,70 @@ class MainWindow(ctk.CTk):
         self._logs_textbox.configure(state="disabled")
 
     # ==================================================================
+    # TUTORIAL & ABOUT
+    # ==================================================================
+
+    def _build_tutorial_view(self) -> None:
+        P = _PALETTE
+        t = self._translator
+
+        header = ctk.CTkFrame(self._tutorial_frame, fg_color="transparent")
+        header.pack(fill="x", padx=32, pady=(24, 0))
+
+        lbl_head = ctk.CTkLabel(
+            header, text=t.get("nav_tutorial"), font=ctk.CTkFont(size=26, weight="bold"),
+            text_color=P["fg_primary"]
+        )
+        lbl_head.pack(side="left")
+        self._register_text(lbl_head, "nav_tutorial")
+
+        ctk.CTkFrame(self._tutorial_frame, height=1, fg_color=P["border"]).pack(fill="x", padx=28, pady=(8, 16))
+
+        # Content
+        tut_text = (
+            "1. Tambahkan Aturan Baru melalui tombol 'Tambah Aturan'.\n"
+            "2. Tentukan nama aturan, ekstensi file, folder pantauan, dan folder tujuan.\n"
+            "3. Aktifkan mode Auto-Start agar aplikasi berjalan di background saat PC menyala.\n"
+            "4. Gunakan fitur 'Minimize to Tray' agar aplikasi tidak mengganggu taskbar Anda.\n"
+            "5. Semua file akan dipindahkan otomatis secara real-time!\n"
+            "6. Gunakan 'Rapihkan Sekarang' jika ada file lama yang belum dipindahkan."
+        )
+        lbl_content = ctk.CTkLabel(
+            self._tutorial_frame, text=tut_text,
+            font=ctk.CTkFont(size=14), text_color=P["fg_primary"], justify="left", anchor="nw"
+        )
+        lbl_content.pack(fill="both", expand=True, padx=32, pady=10)
+
+    def _build_about_view(self) -> None:
+        P = _PALETTE
+        t = self._translator
+
+        header = ctk.CTkFrame(self._about_frame, fg_color="transparent")
+        header.pack(fill="x", padx=32, pady=(24, 0))
+
+        lbl_head = ctk.CTkLabel(
+            header, text=t.get("nav_about"), font=ctk.CTkFont(size=26, weight="bold"),
+            text_color=P["fg_primary"]
+        )
+        lbl_head.pack(side="left")
+        self._register_text(lbl_head, "nav_about")
+
+        ctk.CTkFrame(self._about_frame, height=1, fg_color=P["border"]).pack(fill="x", padx=28, pady=(8, 16))
+
+        # Content
+        about_text = (
+            "Auto File Organizer v1.0.0\n\n"
+            "Aplikasi ringan untuk mengatur dan mengelola file-file Anda secara otomatis.\n"
+            "Dibuat dengan cinta untuk mempermudah hidup Anda. ❤️\n\n"
+            "🔗 GitHub: https://github.com/S-Crocophim/Auto-Manage-Files.git"
+        )
+        lbl_content = ctk.CTkLabel(
+            self._about_frame, text=about_text,
+            font=ctk.CTkFont(size=14), text_color=P["fg_primary"], justify="left", anchor="nw"
+        )
+        lbl_content.pack(fill="both", expand=True, padx=32, pady=10)
+
+    # ==================================================================
     # RULE CARDS (CASCADING LOAD)
     # ==================================================================
 
@@ -411,8 +508,11 @@ class MainWindow(ctk.CTk):
         self._pending_afters.clear()
 
         # Hancurkan widget lama dengan aman
-        for widget in self._scroll.winfo_children():
+        for widget in list(self._scroll.winfo_children()):
             try:
+                widget.pack_forget()
+                for child in widget.winfo_children():
+                    child.destroy()
                 widget.destroy()
             except Exception:
                 pass
@@ -519,10 +619,15 @@ class MainWindow(ctk.CTk):
 
     def _show_dashboard(self) -> None:
         self._dashboard_frame.lift()
-        self._refresh_rule_cards()
 
     def _show_logs(self) -> None:
         self._logs_frame.lift()
+
+    def _show_tutorial(self) -> None:
+        self._tutorial_frame.lift()
+
+    def _show_about(self) -> None:
+        self._about_frame.lift()
 
     def _add_rule(self) -> None:
         dialog = RuleDialog(self)
