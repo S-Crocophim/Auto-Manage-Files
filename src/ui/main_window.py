@@ -9,9 +9,12 @@ Mendukung Transisi Tema Halus Bawaan dan Pergantian Bahasa Dinamis.
 """
 
 import logging
+import webbrowser
+import json
 from typing import Callable, Optional
 
 import customtkinter as ctk
+from tkinter import filedialog
 
 from src.core import config_manager
 from src.core.startup_manager import is_auto_start_enabled, set_auto_start
@@ -257,6 +260,28 @@ class MainWindow(ctk.CTk):
             width=44, height=22,
         ).pack(side="right")
 
+        # ---------- Export / Import Settings ----------
+        imp_exp_frame = ctk.CTkFrame(bottom_frame, fg_color="transparent")
+        imp_exp_frame.pack(fill="x", padx=20, pady=(4, 4))
+        
+        btn_export = ctk.CTkButton(
+            imp_exp_frame, text=t.get("nav_export_settings"), height=28, corner_radius=8,
+            fg_color=P["bg_input"], hover_color=P["hover"],
+            text_color=P["fg_primary"], font=ctk.CTkFont(size=11),
+            command=self._export_settings,
+        )
+        btn_export.pack(side="left", fill="x", expand=True, padx=(0, 4))
+        self._register_text(btn_export, "nav_export_settings")
+
+        btn_import = ctk.CTkButton(
+            imp_exp_frame, text=t.get("nav_import_settings"), height=28, corner_radius=8,
+            fg_color=P["bg_input"], hover_color=P["hover"],
+            text_color=P["fg_primary"], font=ctk.CTkFont(size=11),
+            command=self._import_settings,
+        )
+        btn_import.pack(side="right", fill="x", expand=True, padx=(4, 0))
+        self._register_text(btn_import, "nav_import_settings")
+
         # ---------- Watermark ----------
         watermark_lbl = ctk.CTkLabel(
             bottom_frame, text=t.get("watermark_credit"),
@@ -449,19 +474,12 @@ class MainWindow(ctk.CTk):
         ctk.CTkFrame(self._tutorial_frame, height=1, fg_color=P["border"]).pack(fill="x", padx=28, pady=(8, 16))
 
         # Content
-        tut_text = (
-            "1. Tambahkan Aturan Baru melalui tombol 'Tambah Aturan'.\n"
-            "2. Tentukan nama aturan, ekstensi file, folder pantauan, dan folder tujuan.\n"
-            "3. Aktifkan mode Auto-Start agar aplikasi berjalan di background saat PC menyala.\n"
-            "4. Gunakan fitur 'Minimize to Tray' agar aplikasi tidak mengganggu taskbar Anda.\n"
-            "5. Semua file akan dipindahkan otomatis secara real-time!\n"
-            "6. Gunakan 'Rapihkan Sekarang' jika ada file lama yang belum dipindahkan."
-        )
         lbl_content = ctk.CTkLabel(
-            self._tutorial_frame, text=tut_text,
+            self._tutorial_frame, text=t.get("tutorial_content"),
             font=ctk.CTkFont(size=14), text_color=P["fg_primary"], justify="left", anchor="nw"
         )
         lbl_content.pack(fill="both", expand=True, padx=32, pady=10)
+        self._register_text(lbl_content, "tutorial_content")
 
     def _build_about_view(self) -> None:
         P = _PALETTE
@@ -479,18 +497,27 @@ class MainWindow(ctk.CTk):
 
         ctk.CTkFrame(self._about_frame, height=1, fg_color=P["border"]).pack(fill="x", padx=28, pady=(8, 16))
 
-        # Content
-        about_text = (
-            "Auto File Organizer v1.0.0\n\n"
-            "Aplikasi ringan untuk mengatur dan mengelola file-file Anda secara otomatis.\n"
-            "Dibuat dengan cinta untuk mempermudah hidup Anda. ❤️\n\n"
-            "🔗 GitHub: https://github.com/S-Crocophim/Auto-Manage-Files.git"
-        )
+        # Content Wrapper
+        content_frame = ctk.CTkFrame(self._about_frame, fg_color="transparent")
+        content_frame.pack(fill="both", expand=True, padx=32, pady=10)
+
         lbl_content = ctk.CTkLabel(
-            self._about_frame, text=about_text,
+            content_frame, text=t.get("about_content"),
             font=ctk.CTkFont(size=14), text_color=P["fg_primary"], justify="left", anchor="nw"
         )
-        lbl_content.pack(fill="both", expand=True, padx=32, pady=10)
+        lbl_content.pack(anchor="nw")
+        self._register_text(lbl_content, "about_content")
+
+        lbl_link = ctk.CTkLabel(
+            content_frame, text=t.get("about_link_text"),
+            font=ctk.CTkFont(size=14, underline=True), text_color="#1f538d", justify="left", cursor="hand2"
+        )
+        lbl_link.pack(anchor="nw")
+        self._register_text(lbl_link, "about_link_text")
+        
+        lbl_link.bind("<Button-1>", lambda e: webbrowser.open("https://github.com/S-Crocophim/Auto-Manage-Files"))
+        lbl_link.bind("<Enter>", lambda e: lbl_link.configure(text_color="#14375e"))
+        lbl_link.bind("<Leave>", lambda e: lbl_link.configure(text_color="#1f538d"))
 
     # ==================================================================
     # RULE CARDS (CASCADING LOAD)
@@ -668,6 +695,56 @@ class MainWindow(ctk.CTk):
     def _toggle_tray_setting(self) -> None:
         self._config.setdefault("settings", {})["minimize_to_tray_on_close"] = self._tray_var.get()
         config_manager.save_config(self._config)
+
+    def _export_settings(self) -> None:
+        path = filedialog.asksaveasfilename(
+            defaultextension=".json",
+            filetypes=[("JSON Files", "*.json")],
+            initialfile="AutoFileOrganizer_Settings.json",
+            title="Export Settings"
+        )
+        if path:
+            try:
+                with open(path, "w", encoding="utf-8") as f:
+                    json.dump(self._config, f, indent=4, ensure_ascii=False)
+                logger.info(f"Settings exported to {path}")
+            except Exception as e:
+                logger.error(f"Failed to export settings: {e}")
+
+    def _import_settings(self) -> None:
+        path = filedialog.askopenfilename(
+            filetypes=[("JSON Files", "*.json")],
+            title="Import Settings"
+        )
+        if path:
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    new_config = json.load(f)
+                
+                # Update config
+                self._config = new_config
+                config_manager.save_config(self._config)
+                
+                # Apply new settings immediately
+                self._on_rules_changed(self._config.get("rules", []))
+                
+                theme = self._config.get("settings", {}).get("theme", "dark")
+                ctk.set_appearance_mode(theme)
+                theme_display = self._translator.get("theme_light") if theme == "light" else self._translator.get("theme_dark")
+                self._theme_var.set(theme_display)
+
+                lang = self._config.get("settings", {}).get("language", "id")
+                self._translator.set_language(lang)
+                self._update_language_texts()
+                lang_display = "English" if lang == "en" else "Indonesia"
+                self._lang_var.set(lang_display)
+
+                self._auto_start_var.set(is_auto_start_enabled())
+                self._tray_var.set(self._config.get("settings", {}).get("minimize_to_tray_on_close", True))
+                
+                logger.info(f"Settings imported from {path}")
+            except Exception as e:
+                logger.error(f"Failed to import settings: {e}")
 
     def _on_theme_change(self, display_value: str) -> None:
         t = self._translator

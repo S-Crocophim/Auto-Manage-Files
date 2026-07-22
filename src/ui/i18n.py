@@ -68,6 +68,14 @@ _TRANSLATIONS = {
         "id": "Dibuat oleh Px0",
         "en": "Made by Px0"
     },
+    "nav_export_settings": {
+        "id": "📤  Export Settings",
+        "en": "📤  Export Settings"
+    },
+    "nav_import_settings": {
+        "id": "📥  Import Settings",
+        "en": "📥  Import Settings"
+    },
 
     # ------------------------------------------------------------------
     # Main Dashboard
@@ -100,9 +108,49 @@ _TRANSLATIONS = {
         "id": "Catatan Aktivitas",
         "en": "Activity Logs"
     },
-    "btn_clear_logs": {
-        "id": "🧹 Bersihkan Log",
-        "en": "🧹 Clear Logs"
+    "clear_logs": {
+        "id": "🗑️  Bersihkan Log",
+        "en": "🗑️  Clear Logs"
+    },
+    
+    # ------------------------------------------------------------------
+    # Tutorial & About Tabs
+    # ------------------------------------------------------------------
+    "tutorial_content": {
+        "id": (
+            "1. Tambahkan Aturan Baru melalui tombol 'Tambah Aturan'.\n"
+            "2. Tentukan nama aturan, ekstensi file, folder pantauan, dan folder tujuan.\n"
+            "3. Aktifkan mode Auto-Start agar aplikasi berjalan di background saat PC menyala.\n"
+            "4. Gunakan fitur 'Minimize to Tray' agar aplikasi tidak mengganggu taskbar Anda.\n"
+            "5. Semua file akan dipindahkan otomatis secara real-time!\n"
+            "6. Gunakan 'Rapihkan Sekarang' jika ada file lama yang belum dipindahkan."
+        ),
+        "en": (
+            "1. Add a New Rule via the 'Add Rule' button.\n"
+            "2. Set the rule name, file extensions, watch folder, and target folder.\n"
+            "3. Enable Auto-Start so the app runs in the background on PC startup.\n"
+            "4. Use 'Minimize to Tray' so the app doesn't clutter your taskbar.\n"
+            "5. All files will be moved automatically in real-time!\n"
+            "6. Use 'Organize Now' if you have old files that need moving."
+        )
+    },
+    "about_content": {
+        "id": (
+            "Auto File Organizer v1.0.0\n\n"
+            "Aplikasi ringan untuk mengatur dan mengelola file-file Anda secara otomatis.\n"
+            "Dibuat dengan cinta untuk mempermudah hidup Anda. ❤️\n\n"
+            "🔗 GitHub: "
+        ),
+        "en": (
+            "Auto File Organizer v1.0.0\n\n"
+            "A lightweight application to organize and manage your files automatically.\n"
+            "Made with love to make your life easier. ❤️\n\n"
+            "🔗 GitHub: "
+        )
+    },
+    "about_link_text": {
+        "id": "https://github.com/S-Crocophim/Auto-Manage-Files",
+        "en": "https://github.com/S-Crocophim/Auto-Manage-Files"
     },
 
     # ------------------------------------------------------------------
