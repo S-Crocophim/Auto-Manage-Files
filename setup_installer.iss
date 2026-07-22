@@ -10,7 +10,6 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 OutputDir=dist
 OutputBaseFilename=AutoFileOrganizer_Installer
-SetupIconFile=src\assets\app.ico
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
