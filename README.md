@@ -1,95 +1,132 @@
-# 🚀 Auto File Organizer
+# 📁 Auto File Organizer
 
-A modern Windows desktop application built with Python (`customtkinter`) to automatically organize files based on their extensions. It features real-time directory monitoring, a sleek dynamic GUI (Dark/Light mode), Multi-Language support (ID/EN), Windows toast notifications, and System Tray integration.
+<p align="center">
+  <img src="public/icon.png" width="100" height="100" alt="Auto File Organizer Logo" />
+  <br/>
+  <b>Ultra-lightweight, blazingly fast native automatic file organizer built with Tauri v2, Rust & Vue 3.</b>
+  <br/>
+  <i>Aplikasi pemilah file otomatis super ringan dan cepat ditenagai oleh Rust & Vue 3.</i>
+</p>
+
+---
+
+## 🌐 Language Navigation / Navigasi Bahasa
+- [🇮🇩 Bahasa Indonesia](#-bahasa-indonesia)
+- [🇬🇧 English](#-english)
 
 ---
 
-## 🇮🇩 Tutorial Instalasi & Penggunaan (Indonesian)
+<a name="-bahasa-indonesia"></a>
+## 🇮🇩 Bahasa Indonesia
 
-### Prasyarat
-Pastikan Anda sudah menginstal **Python 3.x** di PC Anda. 
-*(Jika belum, unduh dari [python.org](https://www.python.org/downloads/) dan pastikan mencentang "Add Python to PATH" saat instalasi).*
+### 📌 Tentang Aplikasi
+**Auto File Organizer** adalah aplikasi desktop native untuk Windows yang secara otomatis merapikan file di folder Anda (seperti *Downloads*, *Documents*, atau *Desktop*) secara real-time berdasarkan ekstensi, pola nama file, dan ukuran file.
 
-### 1. Instalasi Dependensi (Library)
-Buka Terminal / Command Prompt di folder proyek ini, lalu jalankan perintah berikut untuk menginstal semua library yang dibutuhkan:
-```bash
-pip install -r requirements.txt
-```
-
-### 2. Cara Menjalankan Aplikasi (Mode Script)
-Untuk menjalankan aplikasi secara langsung dari kode sumber:
-```bash
-python src/main.py
-```
-*(Atau gunakan `py src/main.py` jika perintah `python` tidak dikenali).*
-
-### 3. Cara Membangun (Build) Menjadi File .exe
-Aplikasi ini sudah dilengkapi dengan script otomatis untuk mem-*build* versi **Portable** maupun versi **Full Directory** sekaligus.
-```bash
-python build_exe.py
-```
-Setelah proses selesai, periksa folder `dist/`:
-- `AutoFileOrganizer_Portable.exe` : Versi satu file (Standalone) yang bisa langsung dijalankan.
-- `AutoFileOrganizer_Full/` : Folder aplikasi lengkap (digunakan untuk membuat Installer).
-
-### 4. Membuat Full Installer (.exe)
-Jika Anda ingin membuat installer profesional yang bisa di-install ke direktori Program Files:
-1. Jalankan `python build_exe.py` terlebih dahulu.
-2. Unduh dan install [Inno Setup Compiler](https://jrsoftware.org/isinfo.php).
-3. Buka file `setup_installer.iss` yang ada di folder utama menggunakan Inno Setup Compiler.
-4. Klik tombol **Compile** (ikon panah hijau/Run).
-5. File installer `AutoFileOrganizer_Installer.exe` akan muncul di folder `dist/`!
-
-### Fitur-Fitur Utama
-- **Top Bar Navigation:** Berpindah menu dengan mudah (Dashboard, Logs, Tutorial, About).
-- **Auto-Start & System Tray:** Berjalan senyap di background saat PC menyala.
-- **Export/Import Settings:** Simpan konfigurasi *rules* dan setelan Anda ke file `.json` dan muat kembali kapan saja.
-- **Dynamic Themes & Languages:** Ganti tema gelap/terang dan bahasa secara instan (Real-time).
+### ✨ Fitur Utama
+- **⚡ Performa Native Super Ringan:** Menggunakan Rust di backend dengan pemakaian RAM sangat minim (~15–30 MB).
+- **📂 Pemantauan Real-Time (Folder Watcher):** Memantau folder secara latar belakang tanpa membebankan CPU.
+- **🎨 Tampilan Modern & Dwibahasa:** Mode Gelap (Dark) & Terang (Light) dengan pilihan bahasa Indonesia dan Inggris.
+- **↩️ Fitur Undo Pemindahan File:** Kembalikan file yang baru saja dipindahkan hanya dengan 1 klik dari tab Logs.
+- **🛡️ Penanganan Duplikat Fleksibel:** Pilihan aksi duplikat: *Auto-rename* (ganti nama otomatis), *Skip* (lewati), atau *Overwrite* (timpa).
+- **🎯 Filter Lanjutan:** Pengaturan pola nama wildcard (`Invoice_*`) dan batas ukuran file (Min / Max MB).
+- **📁 Drag & Drop Folder:** Tarik dan lepas folder dari Explorer langsung ke aplikasi.
+- **🔽 System Tray & Auto-Start:** Minimalkan ke System Tray saat ditutup dan opsi berjalan otomatis saat Windows menyala.
 
 ---
----
 
-## 🇬🇧 Installation & Usage Tutorial (English)
+### 📦 Cara Install & Menggunakan
 
-### Prerequisites
-Make sure you have **Python 3.x** installed on your PC. 
-*(If not, download it from [python.org](https://www.python.org/downloads/) and ensure you check "Add Python to PATH" during installation).*
-
-### 1. Installing Dependencies
-Open a Terminal / Command Prompt in this project folder, and run the following command to install all required libraries:
-```bash
-pip install -r requirements.txt
-```
-
-### 2. How to Run the Application (Script Mode)
-To run the application directly from the source code:
-```bash
-python src/main.py
-```
-*(Or use `py src/main.py` if the `python` command is not recognized).*
-
-### 3. How to Build Executables (.exe)
-This application includes an automated build script to compile both the **Portable** and **Full Directory** versions simultaneously.
-```bash
-python build_exe.py
-```
-Once the process is complete, check the `dist/` folder:
-- `AutoFileOrganizer_Portable.exe` : A single standalone executable file.
-- `AutoFileOrganizer_Full/` : A complete application directory (used for building the Installer).
-
-### 4. Creating a Full Installer (.exe)
-If you want to create a professional installer that installs to Program Files:
-1. Run `python build_exe.py` first to generate the full directory.
-2. Download and install [Inno Setup Compiler](https://jrsoftware.org/isinfo.php).
-3. Open the `setup_installer.iss` file located in the root folder using Inno Setup Compiler.
-4. Click the **Compile** button (green play icon/Run).
-5. The `AutoFileOrganizer_Installer.exe` will be generated in the `dist/` folder!
-
-### Key Features
-- **Top Bar Navigation:** Easily switch between menus (Dashboard, Logs, Tutorial, About).
-- **Auto-Start & System Tray:** Runs silently in the background on PC startup.
-- **Export/Import Settings:** Save your rules and configuration to a `.json` file and load it back anytime.
-- **Dynamic Themes & Languages:** Switch between Dark/Light modes and languages instantly.
+#### Cara 1: Mengunduh Installer / Portable `.exe` (Untuk Pengguna Langsung)
+1. Buka halaman **[Releases](https://github.com/S-Crocophim/Auto-Manage-Files/releases)** di GitHub.
+2. Unduh file rilis pilihan Anda:
+   - **Installer Setup (`.exe`)**: `Auto File Organizer_1.0.0_x64-setup.exe` (Jalankan dan ikuti wizard instalasi).
+   - **Portable Version (`.exe`)**: `AutoFileOrganizer-Portable.exe` (Bisa langsung dijalankan tanpa perlu install).
+3. Jalankan aplikasi, buka tab **Dashboard**, dan klik **Tambah Aturan** untuk mulai merapikan file Anda!
 
 ---
-*Made with ❤️ by Px0*
+
+#### Cara 2: Menjalankan dari Source Code (Untuk Pengembang / Developer)
+
+##### Prasyarat Sistem:
+- [Node.js](https://nodejs.org/) (v18+)
+- [Rust & Cargo](https://www.rust-lang.org/tools/install)
+- [C++ Build Tools for Visual Studio](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+
+##### Langkah-langkah:
+```bash
+# 1. Clone repository
+git clone https://github.com/S-Crocophim/Auto-Manage-Files.git
+cd Auto-Manage-Files
+
+# 2. Install dependensi Node.js
+npm install
+
+# 3. Jalankan aplikasi mode Development
+npm run tauri dev
+
+# 4. Build installer rilis (.exe)
+npx tauri build
+```
+
+---
+<br/>
+
+<a name="-english"></a>
+## 🇬🇧 English
+
+### 📌 About The App
+**Auto File Organizer** is a native desktop application for Windows that automatically sorts files in your watched directories (like *Downloads*, *Documents*, or *Desktop*) in real-time based on file extensions, wildcard patterns, and file sizes.
+
+### ✨ Key Features
+- **⚡ Blazingly Fast & Lightweight:** Powered by Rust backend with minimal memory footprint (~15–30 MB RAM).
+- **📂 Real-Time Folder Monitoring:** Background folder watcher that detects incoming files instantly without CPU overhead.
+- **🎨 Modern Bilingual Interface:** Clean dark & light mode with toggleable Indonesian and English language support.
+- **↩️ 1-Click Move Undo:** Revert recent file moves with a single click from the Activity Logs view.
+- **🛡️ Flexible Conflict Handling:** Choose between *Auto-rename*, *Skip*, or *Overwrite* for duplicate files.
+- **🎯 Advanced Filters:** Filter by filename wildcard patterns (`Invoice_*`) and file size bounds (Min / Max MB).
+- **📁 Drag & Drop Folder Support:** Drag folders directly from Windows Explorer into path inputs.
+- **🔽 System Tray & Auto-Start:** Minimizes to system tray on window close and optional launch on Windows startup.
+
+---
+
+### 📦 Installation & Usage Guide
+
+#### Option 1: Downloading Ready-to-Use `.exe` (For End Users)
+1. Go to the **[Releases](https://github.com/S-Crocophim/Auto-Manage-Files/releases)** page on GitHub.
+2. Download your preferred binary:
+   - **Setup Installer (`.exe`)**: `Auto File Organizer_1.0.0_x64-setup.exe` (Run installer wizard).
+   - **Portable Version (`.exe`)**: `AutoFileOrganizer-Portable.exe` (Standalone executable, no setup required).
+3. Open the app, navigate to **Dashboard**, and click **Add Rule** to begin organizing files!
+
+---
+
+#### Option 2: Building from Source (For Developers)
+
+##### Prerequisites:
+- [Node.js](https://nodejs.org/) (v18+)
+- [Rust & Cargo](https://www.rust-lang.org/tools/install)
+- [C++ Build Tools for Visual Studio](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+
+##### Build Steps:
+```bash
+# 1. Clone the repository
+git clone https://github.com/S-Crocophim/Auto-Manage-Files.git
+cd Auto-Manage-Files
+
+# 2. Install Node dependencies
+npm install
+
+# 3. Run application in development mode
+npm run tauri dev
+
+# 4. Build production installer & executable (.exe)
+npx tauri build
+```
+
+---
+
+## 📜 License & Credits
+
+- **Author / Developer:** Px0 (`S-Crocophim`)
+- **Technologies:** [Tauri v2](https://tauri.app/), [Rust](https://www.rust-lang.org/), [Vue 3](https://vuejs.org/), [Vite](https://vitejs.dev/)
+- **License:** MIT License
