@@ -1,4 +1,5 @@
 use notify::{Event, EventKind, RecursiveMode, Watcher};
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -46,6 +47,7 @@ pub fn start_folder_watcher<R: tauri::Runtime>(
     }
 
     let rules_arc = Arc::new(Mutex::new(enabled_rules));
+    let processing_files: Arc<Mutex<HashSet<PathBuf>>> = Arc::new(Mutex::new(HashSet::new()));
 
     thread::spawn(move || {
         while let Ok(res) = rx.recv() {
@@ -56,26 +58,41 @@ pub fn start_folder_watcher<R: tauri::Runtime>(
                             continue;
                         }
 
+                        // Deduplicate concurrent watcher events for the same file
+                        {
+                            let mut lock = processing_files.lock().unwrap();
+                            if lock.contains(&path) {
+                                continue;
+                            }
+                            lock.insert(path.clone());
+                        }
+
                         let rules = rules_arc.lock().unwrap().clone();
                         let app = app_handle.clone();
+                        let processing_files_clone = processing_files.clone();
+                        let path_clone = path.clone();
 
                         thread::spawn(move || {
                             thread::sleep(Duration::from_millis(1500));
-                            if !path.is_file() {
+                            
+                            // Cleanup lock after delay regardless of outcome
+                            defer_remove(&processing_files_clone, &path_clone);
+
+                            if !path_clone.is_file() {
                                 return;
                             }
 
                             for rule in &rules {
-                                if matches_rule_criteria(&path, rule) {
+                                if matches_rule_criteria(&path_clone, rule) {
                                     let dest = PathBuf::from(rule.destination.trim());
-                                    let filename = path
+                                    let filename = path_clone
                                         .file_name()
                                         .and_then(|n| n.to_str())
                                         .unwrap_or("")
                                         .to_string();
 
                                     match move_file_with_conflict(
-                                        &path,
+                                        &path_clone,
                                         &dest,
                                         &rule.conflict_action,
                                         5,
@@ -83,8 +100,10 @@ pub fn start_folder_watcher<R: tauri::Runtime>(
                                     ) {
                                         Ok(dest_path) => {
                                             let log_msg = format!(
-                                                "[{}] Moved: {} -> {:?}",
-                                                rule.name, filename, dest_path
+                                                "[{}] Moved: {} -> \"{}\"",
+                                                rule.name,
+                                                filename,
+                                                dest_path.display()
                                             );
                                             app.emit("log-event", log_msg).ok();
                                         }
@@ -107,4 +126,14 @@ pub fn start_folder_watcher<R: tauri::Runtime>(
     });
 
     Ok(watcher)
+}
+
+fn defer_remove(processing_files: &Arc<Mutex<HashSet<PathBuf>>>, path: &PathBuf) {
+    let processing_files = processing_files.clone();
+    let path = path.clone();
+    thread::spawn(move || {
+        thread::sleep(Duration::from_secs(3));
+        let mut lock = processing_files.lock().unwrap();
+        lock.remove(&path);
+    });
 }

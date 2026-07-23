@@ -149,7 +149,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue';
+import { ref, reactive, onMounted, onUnmounted, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { open, save } from '@tauri-apps/plugin-dialog';
@@ -171,6 +171,9 @@ const logs = ref([]);
 const showRuleDialog = ref(false);
 const editingRule = ref(null);
 const toasts = ref([]);
+const recentNotifs = new Set();
+
+let unlistenLogEvent = null;
 
 function showToast(message, type = 'success', duration = 3500) {
   const id = Math.random().toString(36).substring(2, 9);
@@ -182,6 +185,15 @@ function showToast(message, type = 'success', duration = 3500) {
 
 function dismissToast(id) {
   toasts.value = toasts.value.filter(t => t.id !== id);
+}
+
+function isDuplicateNotif(key, cooldownMs = 3000) {
+  if (recentNotifs.has(key)) return true;
+  recentNotifs.add(key);
+  setTimeout(() => {
+    recentNotifs.delete(key);
+  }, cooldownMs);
+  return false;
 }
 
 const config = reactive({
@@ -206,7 +218,7 @@ watch(
 onMounted(async () => {
   await loadConfig();
   
-  await listen('log-event', (event) => {
+  unlistenLogEvent = await listen('log-event', (event) => {
     const time = new Date().toLocaleTimeString();
     const payload = event.payload;
     const formatted = `[${time}] ${payload}`;
@@ -219,6 +231,10 @@ onMounted(async () => {
         const filename = match[2];
         const destPath = match[3];
         
+        // Deduplicate fast consecutive notifications for the same file move
+        const notifKey = `${ruleName}:${filename}:${destPath}`;
+        if (isDuplicateNotif(notifKey, 3000)) return;
+
         config.history.unshift({
           id: Math.random().toString(36).substring(2, 9),
           rule_name: ruleName,
@@ -230,16 +246,31 @@ onMounted(async () => {
         if (config.history.length > 50) config.history.pop();
         saveConfig();
 
-        // Cool Toast Notification for File Move
-        showToast(`✨ [${ruleName}] File moved: ${filename}`, 'success');
+        // Shortened path helper
+        const shortDest = destPath.length > 30 ? '…' + destPath.slice(-29) : destPath;
+
+        // In-App Toast Notification with Destination Details
+        showToast(`✨ [${ruleName}] Moved ${filename} ➔ ${shortDest}`, 'success');
+
+        // OS Windows Notification with Destination Details
+        sendNotification({
+          title: `✨ [${ruleName}] File Moved`,
+          body: `File: ${filename}\n➜ Target: ${destPath}`
+        }).catch(() => {});
+      }
+    } else if (typeof payload === 'string' && payload.includes('Manual organization')) {
+      if (!isDuplicateNotif(payload, 3000)) {
+        sendNotification({
+          title: '📁 Auto File Organizer',
+          body: payload
+        }).catch(() => {});
       }
     }
-    
-    sendNotification({
-      title: 'Auto File Organizer',
-      body: payload
-    }).catch(() => {});
   });
+});
+
+onUnmounted(() => {
+  if (unlistenLogEvent) unlistenLogEvent();
 });
 
 async function loadConfig() {
@@ -269,7 +300,7 @@ async function onUndoMove(historyItem) {
     });
     config.history = config.history.filter(h => h.id !== historyItem.id);
     await saveConfig();
-    showToast(`↩️ Undo successful! File restored to original location.`, 'success');
+    showToast(`↩️ Undo successful! Restored to original folder.`, 'success');
   } catch (err) {
     showToast(`⚠️ Undo failed: ${err}`, 'error');
   }
