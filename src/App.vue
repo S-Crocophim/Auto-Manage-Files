@@ -1,5 +1,8 @@
 <template>
   <div id="app" :data-theme="config.settings.theme">
+    <!-- Toast Notification Banner System -->
+    <Toast :toasts="toasts" @dismiss="dismissToast" />
+
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="brand">
@@ -155,6 +158,7 @@ import { sendNotification } from '@tauri-apps/plugin-notification';
 
 import { t } from './i18n.js';
 import Icons from './components/Icons.vue';
+import Toast from './components/Toast.vue';
 import Dashboard from './components/Dashboard.vue';
 import LogViewer from './components/LogViewer.vue';
 import Tutorial from './components/Tutorial.vue';
@@ -166,6 +170,19 @@ const isProcessing = ref(false);
 const logs = ref([]);
 const showRuleDialog = ref(false);
 const editingRule = ref(null);
+const toasts = ref([]);
+
+function showToast(message, type = 'success', duration = 3500) {
+  const id = Math.random().toString(36).substring(2, 9);
+  toasts.value.push({ id, message, type });
+  setTimeout(() => {
+    dismissToast(id);
+  }, duration);
+}
+
+function dismissToast(id) {
+  toasts.value = toasts.value.filter(t => t.id !== id);
+}
 
 const config = reactive({
   rules: [],
@@ -212,6 +229,9 @@ onMounted(async () => {
 
         if (config.history.length > 50) config.history.pop();
         saveConfig();
+
+        // Cool Toast Notification for File Move
+        showToast(`✨ [${ruleName}] File moved: ${filename}`, 'success');
       }
     }
     
@@ -249,8 +269,9 @@ async function onUndoMove(historyItem) {
     });
     config.history = config.history.filter(h => h.id !== historyItem.id);
     await saveConfig();
+    showToast(`↩️ Undo successful! File restored to original location.`, 'success');
   } catch (err) {
-    alert(`Undo failed: ${err}`);
+    showToast(`⚠️ Undo failed: ${err}`, 'error');
   }
 }
 
@@ -259,6 +280,7 @@ async function toggleRule(ruleId) {
   if (target) {
     target.enabled = !target.enabled;
     await saveConfig();
+    showToast(target.enabled ? `Rule "${target.name}" activated` : `Rule "${target.name}" disabled`, 'info');
   }
 }
 
@@ -276,16 +298,20 @@ async function onSaveRule(savedRule) {
   if (editingRule.value) {
     const idx = config.rules.findIndex(r => r.id === savedRule.id);
     if (idx !== -1) config.rules[idx] = savedRule;
+    showToast(`Rule "${savedRule.name}" updated!`, 'success');
   } else {
     config.rules.push(savedRule);
+    showToast(`Rule "${savedRule.name}" added successfully!`, 'success');
   }
   showRuleDialog.value = false;
   await saveConfig();
 }
 
 async function deleteRule(ruleId) {
+  const target = config.rules.find(r => r.id === ruleId);
   config.rules = config.rules.filter(r => r.id !== ruleId);
   await saveConfig();
+  showToast(`Rule "${target?.name || 'Rule'}" deleted`, 'error');
 }
 
 async function triggerManual() {
@@ -294,8 +320,9 @@ async function triggerManual() {
     const moved = await invoke('run_manual_organize_cmd', { rules: config.rules });
     const msg = `Manual organization done. ${moved} file(s) moved.`;
     logs.value.push(`[${new Date().toLocaleTimeString()}] ${msg}`);
+    showToast(`🎉 Organization complete! ${moved} file(s) moved.`, 'success');
   } catch (err) {
-    console.error(err);
+    showToast(`⚠️ Organization failed: ${err}`, 'error');
   } finally {
     isProcessing.value = false;
   }
@@ -305,8 +332,10 @@ async function toggleAutoStart() {
   try {
     if (config.settings.auto_start) {
       await enable();
+      showToast("Auto-Start enabled for Windows startup!", 'success');
     } else {
       await disable();
+      showToast("Auto-Start disabled", 'info');
     }
   } catch (e) {
     console.error("AutoStart plugin error:", e);
@@ -329,9 +358,10 @@ async function exportSettings() {
       a.download = 'AutoFileOrganizer_Settings.json';
       a.click();
       URL.revokeObjectURL(url);
+      showToast("Settings exported successfully!", 'success');
     }
   } catch (err) {
-    console.error(err);
+    showToast("Failed to export settings", 'error');
   }
 }
 
@@ -349,10 +379,11 @@ async function importSettings() {
         config.settings = { ...config.settings, ...data.settings };
         if (data.history) config.history = data.history;
         await saveConfig();
+        showToast("Settings imported successfully!", 'success');
       }
     }
   } catch (err) {
-    console.error("Import settings error:", err);
+    showToast("Failed to import settings", 'error');
   }
 }
 
