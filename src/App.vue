@@ -356,7 +356,11 @@ async function importSettings() {
   }
 }
 
-function quitApp() {
-  window.close();
+async function quitApp() {
+  try {
+    await invoke('quit_app_cmd');
+  } catch {
+    window.close();
+  }
 }
 </script>

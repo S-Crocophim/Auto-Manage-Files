@@ -5,7 +5,7 @@ pub mod watcher;
 use std::sync::{Arc, Mutex};
 use tauri::{
     menu::{Menu, MenuItem},
-    tray::{TrayIconBuilder, TrayIconEvent},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager, State, WindowEvent,
 };
 use tauri_plugin_dialog::DialogExt;
@@ -75,6 +75,11 @@ fn restart_watcher_cmd(state: State<'_, WatcherState>, app_handle: tauri::AppHan
     Ok(())
 }
 
+#[tauri::command]
+fn quit_app_cmd() {
+    std::process::exit(0);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let initial_config = load_config();
@@ -98,7 +103,7 @@ pub fn run() {
             let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_i, &organize_i, &quit_i])?;
 
-            let _tray = TrayIconBuilder::new()
+            let tray = TrayIconBuilder::with_id("main-tray")
                 .icon(app.default_window_icon().unwrap().clone())
                 .menu(&menu)
                 .show_menu_on_left_click(false)
@@ -116,12 +121,12 @@ pub fn run() {
                         app.emit("log-event", log_msg).ok();
                     }
                     "quit" => {
-                        app.exit(0);
+                        std::process::exit(0);
                     }
                     _ => {}
                 })
                 .on_tray_icon_event(|tray, event| {
-                    if let TrayIconEvent::Click { button: _, button_state: _, .. } = event {
+                    if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = event {
                         let app = tray.app_handle();
                         if let Some(window) = app.get_webview_window("main") {
                             window.show().ok();
@@ -130,6 +135,9 @@ pub fn run() {
                     }
                 })
                 .build(app)?;
+
+            // Prevent tray icon handle from being dropped when setup function returns
+            std::mem::forget(tray);
 
             let state = app.state::<WatcherState>();
             if let Ok(w) = start_folder_watcher(app_handle, initial_config.rules) {
@@ -153,7 +161,8 @@ pub fn run() {
             run_manual_organize_cmd,
             undo_file_move_cmd,
             pick_folder_cmd,
-            restart_watcher_cmd
+            restart_watcher_cmd,
+            quit_app_cmd
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
