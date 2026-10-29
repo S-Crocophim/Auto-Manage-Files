@@ -64,3 +64,4 @@ describe("rules utilities", () => {
     expect(issues).toEqual([{ field: "size", code: "invalidSize" }]);
   });
 });
+
