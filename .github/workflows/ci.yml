@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  NODE_VERSION: 24.14.1
+  RUST_VERSION: 1.96.0
+
+jobs:
+  frontend:
+    name: Frontend quality
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Audit dependency vulnerabilities
+        run: npm audit --audit-level=high
+
+      - name: Verify product and release configuration
+        run: node scripts/check-version.mjs --release
+
+      - name: Lint, type-check, test, and build frontend
+        run: npm run check
+
+  rust:
+    name: Rust quality
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install pinned Rust toolchain
+        shell: pwsh
+        run: rustup toolchain install $env:RUST_VERSION --profile minimal --component rustfmt --component clippy
+
+      - name: Cache Cargo data
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ env.RUST_VERSION }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+
+      - name: Check Rust formatting
+        working-directory: src-tauri
+        run: cargo fmt --all -- --check
+
+      - name: Run Clippy with warnings denied
+        working-directory: src-tauri
+        run: cargo clippy --all-targets --all-features --locked -- -D warnings
+
+      - name: Run Rust tests
+        working-directory: src-tauri
+        run: cargo test --all-features --locked
+
+  desktop-build:
+    name: Tauri production smoke build
+    needs: [frontend, rust]
+    runs-on: windows-2025
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install pinned Rust toolchain
+        shell: pwsh
+        run: rustup toolchain install $env:RUST_VERSION --profile minimal
+
+      - name: Restore Cargo cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ env.RUST_VERSION }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build production executable without installer
+        run: npm run tauri -- build --no-bundle --ci -- --locked

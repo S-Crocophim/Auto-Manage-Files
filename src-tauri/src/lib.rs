@@ -1,169 +1,181 @@
-pub mod config;
-pub mod organizer;
-pub mod watcher;
+mod commands;
+mod database;
+mod error;
+mod file_ops;
+mod models;
+mod rules;
+mod state;
+mod watcher;
 
-use std::sync::{Arc, Mutex};
+use std::path::PathBuf;
+use std::sync::Arc;
+
+use commands::run_manual_from_tray;
+use database::Database;
+use file_ops::FileService;
+use state::AppState;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Emitter, Manager, State, WindowEvent,
+    Manager, RunEvent, WindowEvent,
 };
-use tauri_plugin_dialog::DialogExt;
-use notify::RecommendedWatcher;
+use watcher::WatcherManager;
 
-use config::{load_config, save_config, AppConfig, Rule};
-use organizer::{run_manual_organization, undo_file_move};
-use watcher::start_folder_watcher;
-
-pub struct WatcherState {
-    pub watcher: Arc<Mutex<Option<RecommendedWatcher>>>,
-}
-
-#[tauri::command]
-fn get_config_cmd() -> AppConfig {
-    load_config()
-}
-
-#[tauri::command]
-fn save_config_cmd(config: AppConfig, state: State<'_, WatcherState>, app_handle: tauri::AppHandle) -> Result<(), String> {
-    save_config(&config)?;
-
-    let mut watcher_guard = state.watcher.lock().unwrap();
-    *watcher_guard = None;
-
-    if let Ok(w) = start_folder_watcher(app_handle, config.rules) {
-        *watcher_guard = Some(w);
-    }
-
-    Ok(())
-}
-
-#[tauri::command]
-fn run_manual_organize_cmd(rules: Vec<Rule>, app_handle: tauri::AppHandle) -> usize {
-    let moved_count = run_manual_organization(&rules);
-    let log_msg = format!("Manual organization finished. {} file(s) moved.", moved_count);
-    app_handle.emit("log-event", log_msg).ok();
-    moved_count
-}
-
-#[tauri::command]
-fn undo_file_move_cmd(src_path: String, dest_path: String, app_handle: tauri::AppHandle) -> Result<(), String> {
-    undo_file_move(&src_path, &dest_path)?;
-    let log_msg = format!("Undo successful: Restored {} back to {}", dest_path, src_path);
-    app_handle.emit("log-event", log_msg).ok();
-    Ok(())
-}
-
-#[tauri::command]
-async fn pick_folder_cmd(app_handle: tauri::AppHandle) -> Result<Option<String>, String> {
-    let (tx, rx) = std::sync::mpsc::channel();
-    app_handle.dialog().file().pick_folder(move |folder_path| {
-        let _ = tx.send(folder_path.map(|p| p.to_string()));
-    });
-    rx.recv().map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-fn restart_watcher_cmd(state: State<'_, WatcherState>, app_handle: tauri::AppHandle) -> Result<(), String> {
-    let config = load_config();
-    let mut watcher_guard = state.watcher.lock().unwrap();
-    *watcher_guard = None;
-
-    if let Ok(w) = start_folder_watcher(app_handle, config.rules) {
-        *watcher_guard = Some(w);
-    }
-    Ok(())
-}
-
-#[tauri::command]
-fn quit_app_cmd() {
-    std::process::exit(0);
+fn create_state() -> Result<AppState, error::AppError> {
+    let data_root = dirs::data_local_dir()
+        .or_else(dirs::data_dir)
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("AutoManageFiles");
+    std::fs::create_dir_all(&data_root)?;
+    let database = Arc::new(Database::open(&data_root.join("auto-manage-files.db"))?);
+    database.mark_incomplete_for_review()?;
+    let settings = database.settings()?;
+    database.prune_activity(settings.history_retention_days)?;
+    let files = Arc::new(FileService::new(
+        database.clone(),
+        data_root.join("recovery"),
+    )?);
+    Ok(AppState {
+        database,
+        files,
+        watcher: Arc::new(WatcherManager::default()),
+    })
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let initial_config = load_config();
+    let state = create_state().expect("failed to initialize application state");
+    let setup_state = state.clone();
 
-    tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init())
+    let application = tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_autostart::init(
-            tauri_plugin_autostart::MacosLauncher::AppleScript,
-            Some(vec!["--flag1", "--flag2"]),
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
         ))
-        .manage(WatcherState {
-            watcher: Arc::new(Mutex::new(None)),
-        })
+        .manage(state)
         .setup(move |app| {
-            let app_handle = app.handle().clone();
+            let show_item =
+                MenuItem::with_id(app, "show", "Buka Auto Manage Files", true, None::<&str>)?;
+            let organize_item =
+                MenuItem::with_id(app, "organize", "Organize sekarang", true, None::<&str>)?;
+            let monitoring_item = MenuItem::with_id(
+                app,
+                "monitoring",
+                "Jeda/lanjutkan monitoring",
+                true,
+                None::<&str>,
+            )?;
+            let quit_item = MenuItem::with_id(app, "quit", "Keluar", true, None::<&str>)?;
+            let menu = Menu::with_items(
+                app,
+                &[&show_item, &organize_item, &monitoring_item, &quit_item],
+            )?;
 
-            let show_i = MenuItem::with_id(app, "show", "Open Settings", true, None::<&str>)?;
-            let organize_i = MenuItem::with_id(app, "organize", "Organize Now", true, None::<&str>)?;
-            let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show_i, &organize_i, &quit_i])?;
-
-            let tray = TrayIconBuilder::with_id("main-tray")
-                .icon(app.default_window_icon().unwrap().clone())
+            let tray_state = setup_state.clone();
+            let mut tray_builder = TrayIconBuilder::with_id("main-tray")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(move |app, event| match event.id.as_ref() {
-                    "show" => {
-                        if let Some(window) = app.get_webview_window("main") {
-                            window.show().ok();
-                            window.set_focus().ok();
+                    "show" => show_main_window(app),
+                    "organize" => {
+                        run_manual_from_tray(app.clone(), tray_state.clone());
+                    }
+                    "monitoring" => {
+                        if let Ok(settings) = tray_state.database.settings() {
+                            let enabled = !settings.monitoring_enabled;
+                            let _ = tray_state.database.update_settings(models::SettingsPatch {
+                                monitoring_enabled: Some(enabled),
+                                ..models::SettingsPatch::default()
+                            });
+                            if enabled {
+                                let _ = tray_state.watcher.restart(
+                                    app.clone(),
+                                    tray_state.database.clone(),
+                                    tray_state.files.clone(),
+                                );
+                            } else {
+                                tray_state.watcher.pause(app);
+                            }
                         }
                     }
-                    "organize" => {
-                        let config = load_config();
-                        let count = run_manual_organization(&config.rules);
-                        let log_msg = format!("Manual organization from tray finished. {} file(s) moved.", count);
-                        app.emit("log-event", log_msg).ok();
-                    }
-                    "quit" => {
-                        std::process::exit(0);
-                    }
+                    "quit" => app.exit(0),
                     _ => {}
                 })
                 .on_tray_icon_event(|tray, event| {
-                    if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = event {
-                        let app = tray.app_handle();
-                        if let Some(window) = app.get_webview_window("main") {
-                            window.show().ok();
-                            window.set_focus().ok();
-                        }
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        show_main_window(tray.app_handle());
                     }
-                })
-                .build(app)?;
-
-            // Prevent tray icon handle from being dropped when setup function returns
-            std::mem::forget(tray);
-
-            let state = app.state::<WatcherState>();
-            if let Ok(w) = start_folder_watcher(app_handle, initial_config.rules) {
-                *state.watcher.lock().unwrap() = Some(w);
+                });
+            if let Some(icon) = app.default_window_icon() {
+                tray_builder = tray_builder.icon(icon.clone());
             }
+            tray_builder.build(app)?;
 
+            let settings = setup_state.database.settings()?;
+            if settings.monitoring_enabled {
+                setup_state.watcher.restart(
+                    app.handle().clone(),
+                    setup_state.database.clone(),
+                    setup_state.files.clone(),
+                )?;
+            } else {
+                setup_state.watcher.pause(app.handle());
+            }
             Ok(())
         })
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
-                let config = load_config();
-                if config.settings.minimize_to_tray_on_close {
+                let state = window.state::<AppState>();
+                if state
+                    .database
+                    .settings()
+                    .map(|settings| settings.minimize_to_tray_on_close)
+                    .unwrap_or(true)
+                {
                     api.prevent_close();
-                    window.hide().ok();
+                    let _ = window.hide();
                 }
             }
         })
         .invoke_handler(tauri::generate_handler![
-            get_config_cmd,
-            save_config_cmd,
-            run_manual_organize_cmd,
-            undo_file_move_cmd,
-            pick_folder_cmd,
-            restart_watcher_cmd,
-            quit_app_cmd
+            commands::get_bootstrap,
+            commands::list_rules,
+            commands::upsert_rule,
+            commands::delete_rule,
+            commands::set_rule_enabled,
+            commands::reorder_rules,
+            commands::preview_rules,
+            commands::execute_plan,
+            commands::list_activity,
+            commands::execute_undo,
+            commands::set_monitoring,
+            commands::update_settings,
+            commands::pick_folder,
+            commands::export_config,
+            commands::import_config,
+            commands::shutdown_app,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building Tauri application");
+
+    application.run(|app, event| {
+        if matches!(event, RunEvent::ExitRequested { .. } | RunEvent::Exit) {
+            app.state::<AppState>().watcher.shutdown();
+        }
+    });
+}
+
+fn show_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+    }
 }

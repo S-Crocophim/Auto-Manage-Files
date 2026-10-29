@@ -1,9 +1,10 @@
 [package]
 name = "auto-file-organizer"
-version = "1.0.0"
+version = "2.0.0"
 description = "Auto File Organizer in Rust + Tauri + Vue"
 authors = ["Px0"]
 edition = "2021"
+rust-version = "1.85"
 
 [lib]
 name = "auto_file_organizer_lib"
@@ -22,6 +23,17 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 notify = "6.1"
 dirs = "5.0"
-uuid = { version = "1.6", features = ["v4"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde", "clock"] }
+globset = "0.4"
+rusqlite = { version = "0.32", features = ["bundled"] }
+thiserror = "2"
+blake3 = "1"
+walkdir = "2"
+crossbeam-channel = "0.5"
+dunce = "1"
+
+[dev-dependencies]
+tempfile = "3"
 
 
