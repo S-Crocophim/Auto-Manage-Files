@@ -103,7 +103,7 @@ onBeforeUnmount(() => app.dispose());
       </RouterLink>
 
       <nav class="nav-list">
-        <RouterLink v-for="item in navItems" :key="item.to" class="nav-item" :to="item.to">
+        <RouterLink v-for="item in navItems" :key="item.to" class="nav-item" :to="item.to" :aria-label="item.label">
           <svg v-if="item.icon === 'dashboard'" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6v-9h-6v9Zm0-16v5h6V4h-6Z" /></svg>
           <svg v-else-if="item.icon === 'rules'" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M5 12h14M5 18h14M8 3v6m8 0v6m-6 0v6" /></svg>
           <svg v-else-if="item.icon === 'activity'" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 3-6.25M4 4v5h5m3-2v5l3 2" /></svg>
@@ -123,13 +123,13 @@ onBeforeUnmount(() => app.dispose());
 
     <section class="workspace">
       <header class="topbar">
-        <div><span class="eyebrow">AUTO MANAGE FILES</span><h1>{{ pageTitle }}</h1></div>
+        <div><h1>{{ pageTitle }}</h1></div>
         <div class="topbar-actions">
           <button class="health-pill" :class="`health-pill--${monitoringTone}`" type="button" :aria-label="`${monitoringLabel}. Klik untuk mengubah status.`" @click="toggleMonitoring">
             <span class="health-dot" />{{ monitoringLabel }}
           </button>
           <button class="button button--primary" type="button" @click="organizeNow">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3Zm6 11 .9 2.1L21 17l-2.1.9L18 20l-.9-2.1L15 17l2.1-.9L18 14Z" /></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h12M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none" /></svg>
             {{ t("organizeNow") }}
           </button>
         </div>

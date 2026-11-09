@@ -85,7 +85,7 @@ async function shutdown(): Promise<void> {
 <template>
   <section class="page-stack settings-page">
     <div class="page-heading page-heading--actions">
-      <div><span class="eyebrow">PREFERENCES</span><h2>{{ t("settingsTitle") }}</h2><p>{{ t("settingsSubtitle") }}</p></div><button class="button button--primary" type="button" :disabled="settings.saving" @click="save">
+      <div><h2>{{ t("settingsTitle") }}</h2><p>{{ t("settingsSubtitle") }}</p></div><button class="button button--primary" type="button" :disabled="settings.saving" @click="save">
         <span v-if="settings.saving" class="button-spinner" aria-hidden="true" />{{ t("save") }}
       </button>
     </div>

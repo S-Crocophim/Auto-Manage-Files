@@ -27,7 +27,7 @@ function fileName(path: string): string {
 }
 
 function formatDate(value: string | null): string {
-  if (!value) return "—";
+  if (!value) return "-";
   return new Intl.DateTimeFormat(language.value === "en" ? "en-US" : "id-ID", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
@@ -64,7 +64,7 @@ function activityDescription(item: ActivityDto): string {
 <template>
   <section class="page-stack">
     <div class="page-heading">
-      <div><span class="eyebrow">OVERVIEW</span><h2>{{ t("dashboardTitle") }}</h2><p>{{ t("dashboardSubtitle") }}</p></div>
+      <div><h2>{{ t("dashboardTitle") }}</h2><p>{{ t("dashboardSubtitle") }}</p></div>
       <button class="button button--secondary" type="button" :disabled="!activeCount" @click="previewAll">
         {{ t("previewAll") }}
       </button>
@@ -72,7 +72,7 @@ function activityDescription(item: ActivityDto): string {
 
     <section class="monitoring-hero" :class="{ 'monitoring-hero--paused': !monitoringHealthy }">
       <div class="monitoring-visual" aria-hidden="true">
-        <div class="radar-ring radar-ring--one" /><div class="radar-ring radar-ring--two" /><div class="monitoring-folder">
+        <div class="monitoring-folder">
           ⌂
         </div>
       </div>
@@ -86,7 +86,7 @@ function activityDescription(item: ActivityDto): string {
           {{ sourceCount }} folder sumber dipantau oleh {{ activeCount }} aturan aktif. Semua pemrosesan tetap berada di perangkat ini.
         </p>
         <button class="text-button text-button--light" type="button" @click="toggleMonitoring">
-          {{ monitoringHealthy ? t("pause") : t("resume") }} monitoring →
+          {{ monitoringHealthy ? t("pause") : t("resume") }} monitoring
         </button>
       </div>
       <dl class="monitoring-metrics">
@@ -115,7 +115,7 @@ function activityDescription(item: ActivityDto): string {
       <section class="panel activity-panel">
         <header class="panel-header">
           <div><h3>{{ t("recentActivity") }}</h3><p>Perubahan terbaru dari operasi manual dan realtime.</p></div><RouterLink class="text-button" to="/activity">
-            Lihat semua →
+            Lihat semua
           </RouterLink>
         </header>
         <div v-if="recent.length" class="activity-list">
@@ -128,7 +128,7 @@ function activityDescription(item: ActivityDto): string {
           </article>
         </div>
         <div v-else class="empty-panel empty-panel--compact">
-          <span class="empty-icon" aria-hidden="true">↗</span><h3>{{ t("noActivity") }}</h3><p>Jalankan preview untuk melihat file yang dapat dirapikan.</p>
+          <span class="empty-icon" aria-hidden="true">⌂</span><h3>{{ t("noActivity") }}</h3><p>Jalankan preview untuk melihat file yang dapat dirapikan.</p>
         </div>
       </section>
 

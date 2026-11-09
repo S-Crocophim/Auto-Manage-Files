@@ -159,7 +159,7 @@ async function submit(openPreview: boolean): Promise<void> {
         <section class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="rule-editor-title" @keydown.esc="!saving && emit('close')">
           <header class="drawer-header">
             <div>
-              <span class="eyebrow">RULE BUILDER</span><h2 id="rule-editor-title">
+              <h2 id="rule-editor-title">
                 {{ title }}
               </h2><p>Filter dijalankan berurutan berdasarkan prioritas.</p>
             </div>
@@ -200,7 +200,7 @@ async function submit(openPreview: boolean): Promise<void> {
 
               <label class="field-label" for="rule-destination">{{ t("destinationFolder") }}</label>
               <div class="path-control">
-                <span class="path-control-icon" aria-hidden="true">→</span>
+                <span class="path-control-icon" aria-hidden="true">⌂</span>
                 <input id="rule-destination" v-model="draft.destination" class="text-input" :class="{ 'input-error': fieldError('destination') }" placeholder="D:\Arsip\Dokumen">
                 <button class="button button--ghost button--small" type="button" @click="pickDestination">
                   {{ t("browse") }}

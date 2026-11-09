@@ -89,7 +89,7 @@ async function move(rule: RuleDto, direction: -1 | 1): Promise<void> {
 <template>
   <section class="page-stack">
     <div class="page-heading page-heading--actions">
-      <div><span class="eyebrow">AUTOMATION</span><h2>{{ t("rulesTitle") }}</h2><p>{{ t("rulesSubtitle") }}</p></div>
+      <div><h2>{{ t("rulesTitle") }}</h2><p>{{ t("rulesSubtitle") }}</p></div>
       <div class="heading-actions">
         <button class="button button--secondary" type="button" :disabled="!sorted.length" @click="previewAll">
           {{ t("previewAll") }}

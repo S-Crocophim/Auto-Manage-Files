@@ -124,11 +124,10 @@ async function skip(): Promise<void> {
       <div class="brand">
         <span class="brand-mark" aria-hidden="true">A</span><span><strong>Auto File</strong><small>Organizer</small></span>
       </div>
-      <span class="offline-pill">◆ 100% Offline</span>
+      <span class="offline-pill">100% Offline</span>
     </header>
     <section class="onboarding-card">
       <div class="onboarding-intro">
-        <span class="eyebrow">SETUP 1 MENIT</span>
         <h1>{{ t("onboardingTitle") }}</h1>
         <p>{{ t("onboardingSubtitle") }}</p>
         <div class="safety-points">
@@ -137,10 +136,10 @@ async function skip(): Promise<void> {
       </div>
 
       <div class="onboarding-form">
-        <div class="setup-progress" aria-live="polite">
-          <span class="done"><i>1</i>Konfigurasi</span><b />
-          <span :class="{ done: previewReady }"><i>2</i>Preview</span><b />
-          <span><i>3</i>Aktifkan</span>
+        <div class="setup-progress" role="region" aria-label="Langkah konfigurasi">
+          <span class="done">Konfigurasi</span><span class="step-divider" aria-hidden="true">/</span>
+          <span :class="{ done: previewReady }">Preview</span><span class="step-divider" aria-hidden="true">/</span>
+          <span>Aktifkan</span>
         </div>
         <fieldset class="preset-grid" :disabled="configurationLocked">
           <legend><strong>{{ t("preset") }}</strong><span>Pilih jenis file yang ingin dirapikan.</span></legend>
@@ -156,16 +155,16 @@ async function skip(): Promise<void> {
         </div>
         <div class="onboarding-actions">
           <button v-if="configurationLocked" class="button button--ghost" type="button" :disabled="saving" @click="editConfiguration">
-            ← Ubah konfigurasi
+            Ubah konfigurasi
           </button>
           <button v-else class="button button--ghost" type="button" :disabled="saving" @click="skip">
             {{ t("skipSetup") }}
           </button>
           <button v-if="previewReady" class="button button--primary button--large" type="button" :disabled="saving" @click="activate">
-            <span v-if="saving" class="button-spinner" aria-hidden="true" />{{ t("activateMonitoring") }} →
+            <span v-if="saving" class="button-spinner" aria-hidden="true" />{{ t("activateMonitoring") }}
           </button>
           <button v-else class="button button--primary button--large" type="button" :disabled="!canSave || saving" @click="preparePreview">
-            <span v-if="saving" class="button-spinner" aria-hidden="true" />{{ t("preview") }} Aturan →
+            <span v-if="saving" class="button-spinner" aria-hidden="true" />{{ t("preview") }} Aturan
           </button>
         </div>
       </div>

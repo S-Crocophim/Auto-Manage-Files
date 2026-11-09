@@ -7,6 +7,7 @@ export const usePreviewStore = defineStore("preview", () => {
   const open = ref(false);
   const loading = ref(false);
   const executing = ref(false);
+  const error = ref<string | null>(null);
   const result = ref<PreviewResultDto>();
   const batch = ref<BatchSummaryDto>();
   const selectedIds = ref<string[]>([]);
@@ -22,6 +23,7 @@ export const usePreviewStore = defineStore("preview", () => {
     open.value = true;
     loading.value = true;
     executing.value = false;
+    error.value = null;
     result.value = undefined;
     batch.value = undefined;
     try {
@@ -29,6 +31,9 @@ export const usePreviewStore = defineStore("preview", () => {
       selectedIds.value = result.value.items
         .filter((item) => item.status.toLowerCase() !== "blocked")
         .map((item) => item.id);
+    } catch (cause) {
+      error.value = String(cause);
+      throw cause;
     } finally {
       loading.value = false;
     }
@@ -59,5 +64,5 @@ export const usePreviewStore = defineStore("preview", () => {
       : [...selectedIds.value, id];
   }
 
-  return { open, loading, executing, result, batch, selectedIds, selectedCount, selectedSize, create, execute, applyProgress, close, toggleItem };
+  return { open, loading, executing, error, result, batch, selectedIds, selectedCount, selectedSize, create, execute, applyProgress, close, toggleItem };
 });

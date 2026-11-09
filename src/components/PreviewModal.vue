@@ -9,7 +9,7 @@ import { formatBytes, policyLabelKey } from "@/utils/rules";
 const preview = usePreviewStore();
 const ui = useUiStore();
 const { t } = useI18n();
-const { open, loading, executing, result, batch, selectedIds, selectedCount, selectedSize } = storeToRefs(preview);
+const { open, loading, executing, error, result, batch, selectedIds, selectedCount, selectedSize } = storeToRefs(preview);
 const dialog = ref<HTMLElement | null>(null);
 const executableItems = computed(() => result.value?.items.filter((item) => item.status.toLowerCase() !== "blocked") ?? []);
 const allSelected = computed(() => executableItems.value.length > 0 && executableItems.value.every((item) => selectedIds.value.includes(item.id)));
@@ -44,7 +44,7 @@ async function execute(): Promise<void> {
         <section ref="dialog" class="modal-card preview-modal" role="dialog" aria-modal="true" aria-labelledby="preview-title" tabindex="-1" @keydown.esc="preview.close">
           <header class="modal-header">
             <div>
-              <span class="eyebrow">SAFE MODE</span><h2 id="preview-title">
+              <h2 id="preview-title">
                 {{ t("previewTitle") }}
               </h2><p>{{ t("previewSubtitle") }}</p>
             </div>
@@ -55,6 +55,17 @@ async function execute(): Promise<void> {
 
           <div v-if="loading" class="modal-loading" role="status">
             <div class="spinner" aria-hidden="true" /><strong>{{ t("scanning") }}</strong><span>Memeriksa aturan dan konflik tanpa mengubah file.</span>
+          </div>
+
+          <div v-else-if="error" class="modal-loading modal-loading--error" role="alert">
+            <div class="state-icon" aria-hidden="true">
+              !
+            </div>
+            <strong>Gagal memindai file</strong>
+            <span>{{ error }}</span>
+            <button class="button button--secondary" type="button" @click="preview.create()">
+              {{ t("retry") }}
+            </button>
           </div>
 
           <template v-else-if="result">
@@ -91,7 +102,7 @@ async function execute(): Promise<void> {
               </table>
             </div>
             <div v-else class="empty-panel empty-panel--compact">
-              <span class="empty-icon" aria-hidden="true">✓</span><h3>{{ t("previewEmpty") }}</h3>
+              <span class="empty-icon" aria-hidden="true">⌂</span><h3>{{ t("previewEmpty") }}</h3>
             </div>
 
             <div v-if="batch" class="batch-progress" aria-live="polite">
