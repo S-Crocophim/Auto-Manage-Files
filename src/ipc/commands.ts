@@ -1,4 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
+import { isTauriEnvironment } from "./events";
+import { browserMockApi } from "./mock";
 import type {
   ActivityDto,
   ActivityPageDto,
@@ -48,7 +50,7 @@ async function call<T>(command: string, args?: Record<string, unknown>): Promise
   }
 }
 
-export const desktopApi = {
+const nativeDesktopApi = {
   getBootstrap(): Promise<BootstrapDto> {
     return call("get_bootstrap");
   },
@@ -124,5 +126,14 @@ export const desktopApi = {
     return call("shutdown_app");
   },
 };
+
+export const desktopApi: typeof nativeDesktopApi = new Proxy(nativeDesktopApi, {
+  get(target, prop, receiver) {
+    if (!isTauriEnvironment()) {
+      return Reflect.get(browserMockApi, prop, receiver);
+    }
+    return Reflect.get(target, prop, receiver);
+  },
+});
 
 export type DesktopApi = typeof desktopApi;

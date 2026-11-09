@@ -1,10 +1,17 @@
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type { AppEventMap } from "./generated-types";
 
+export function isTauriEnvironment(): boolean {
+  return typeof window !== "undefined" && Boolean((window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__);
+}
+
 export async function listenTyped<K extends keyof AppEventMap>(
   eventName: K,
   handler: (payload: AppEventMap[K]) => void,
 ): Promise<UnlistenFn> {
+  if (!isTauriEnvironment()) {
+    return () => {};
+  }
   return listen<AppEventMap[K]>(eventName, (event) => handler(event.payload));
 }
 
