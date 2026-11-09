@@ -1,428 +1,145 @@
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted } from "vue";
+import { storeToRefs } from "pinia";
+import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
+import AppToastStack from "@/components/AppToastStack.vue";
+import PreviewModal from "@/components/PreviewModal.vue";
+import { useI18n } from "@/i18n";
+import { useAppStore } from "@/stores/app";
+import { usePreviewStore } from "@/stores/preview";
+import { useRulesStore } from "@/stores/rules";
+import { useSettingsStore } from "@/stores/settings";
+import { useUiStore } from "@/stores/ui";
+
+const app = useAppStore();
+const preview = usePreviewStore();
+const rules = useRulesStore();
+const settings = useSettingsStore();
+const ui = useUiStore();
+const route = useRoute();
+const router = useRouter();
+const { t } = useI18n();
+const { ready, loading, error, monitoring } = storeToRefs(app);
+
+const navItems = computed(() => [
+  { to: "/dashboard", label: t("navDashboard"), icon: "dashboard" },
+  { to: "/rules", label: t("navRules"), icon: "rules" },
+  { to: "/activity", label: t("navActivity"), icon: "activity" },
+  { to: "/settings", label: t("navSettings"), icon: "settings" },
+]);
+const showChrome = computed(() => route.meta.chrome !== false);
+const pageTitle = computed(() => navItems.value.find((item) => route.path.startsWith(item.to))?.label ?? t("appName"));
+const monitoringLabel = computed(() => {
+  if (monitoring.value.state === "monitoring") return t("monitoringActive");
+  if (["paused", "stopped"].includes(monitoring.value.state)) return t("monitoringPaused");
+  if (["attention", "error"].includes(monitoring.value.state)) return t("monitoringAttention");
+  return t("monitoringStarting");
+});
+const monitoringTone = computed(() => {
+  if (monitoring.value.state === "monitoring") return "positive";
+  if (["attention", "error"].includes(monitoring.value.state)) return "danger";
+  return "muted";
+});
+
+async function initialize(): Promise<void> {
+  try {
+    await app.initialize();
+    if (!settings.values.onboardingComplete && rules.items.length === 0) await router.replace("/onboarding");
+  } catch {
+    // A safe error message is rendered by the recovery state.
+  }
+}
+
+async function organizeNow(): Promise<void> {
+  try {
+    await preview.create();
+  } catch (cause) {
+    ui.notify(t("operationFailed", { message: String(cause) }), "error");
+  }
+}
+
+async function toggleMonitoring(): Promise<void> {
+  try {
+    await app.setMonitoring(monitoring.value.state !== "monitoring");
+  } catch (cause) {
+    ui.notify(t("operationFailed", { message: String(cause) }), "error");
+  }
+}
+
+onMounted(() => void initialize());
+onBeforeUnmount(() => app.dispose());
+</script>
+
 <template>
-  <div id="app" :data-theme="config.settings.theme">
-    <!-- Toast Notification Banner System -->
-    <Toast :toasts="toasts" @dismiss="dismissToast" />
+  <a class="skip-link" href="#main-content">Lewati ke konten utama</a>
 
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="brand">
-        <img src="/icon.png" width="30" height="30" alt="Logo" style="border-radius: 6px; object-fit: contain;" />
-        <div class="brand-title">Auto File<br />Organizer</div>
-      </div>
-      <div class="app-desc">{{ t('app_desc', config.settings.language) }}</div>
+  <div v-if="loading && !ready" class="center-state" role="status" aria-live="polite">
+    <div class="brand-mark brand-mark--large" aria-hidden="true">
+      A
+    </div>
+    <div class="spinner" aria-hidden="true" />
+    <h1>{{ t("appName") }}</h1>
+    <p>{{ t("loading") }}</p>
+  </div>
 
-      <div class="separator"></div>
+  <div v-else-if="error && !ready" class="center-state center-state--error" role="alert">
+    <div class="state-icon" aria-hidden="true">
+      !
+    </div>
+    <h1>Aplikasi belum dapat dibuka</h1>
+    <p>{{ error }}</p>
+    <button class="button button--primary" type="button" @click="initialize">
+      {{ t("retry") }}
+    </button>
+  </div>
 
-      <button class="btn btn-secondary" style="margin-bottom: 8px; justify-content: flex-start;" @click="openAddRuleDialog">
-        <Icons name="plus" size="14" />
-        {{ t('nav_add_rule', config.settings.language) }}
-      </button>
+  <RouterView v-else-if="!showChrome" />
 
-      <button class="btn btn-primary" style="justify-content: flex-start;" :disabled="isProcessing" @click="triggerManual">
-        <Icons name="play" size="14" />
-        {{ isProcessing ? t('nav_manual_processing', config.settings.language) : t('nav_manual', config.settings.language) }}
-      </button>
+  <div v-else class="app-shell">
+    <aside class="sidebar" aria-label="Navigasi utama">
+      <RouterLink class="brand" to="/dashboard" aria-label="Auto File Organizer">
+        <span class="brand-mark" aria-hidden="true">A</span>
+        <span><strong>Auto File</strong><small>Organizer</small></span>
+      </RouterLink>
 
-      <div class="sidebar-bottom">
-        <div class="separator"></div>
+      <nav class="nav-list">
+        <RouterLink v-for="item in navItems" :key="item.to" class="nav-item" :to="item.to" :aria-label="item.label">
+          <svg v-if="item.icon === 'dashboard'" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6v-9h-6v9Zm0-16v5h6V4h-6Z" /></svg>
+          <svg v-else-if="item.icon === 'rules'" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M5 12h14M5 18h14M8 3v6m8 0v6m-6 0v6" /></svg>
+          <svg v-else-if="item.icon === 'activity'" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 3-6.25M4 4v5h5m3-2v5l3 2" /></svg>
+          <svg v-else viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7-3.5 2-1-2-3-2.2.4a8 8 0 0 0-1.4-.8L14.7 4h-3.4l-.7 2.6c-.5.2-1 .5-1.4.8L7 7 5 10l2 2-2 2 2 3 2.2-.4c.4.3.9.6 1.4.8l.7 2.6h3.4l.7-2.6c.5-.2 1-.5 1.4-.8L19 17l2-3-2-2Z" /></svg>
+          <span>{{ item.label }}</span>
+        </RouterLink>
+      </nav>
 
-        <div class="setting-row">
-          <span>{{ t('theme_label', config.settings.language) }}</span>
-          <select v-model="config.settings.theme" @change="saveConfig">
-            <option value="dark">{{ t('theme_dark', config.settings.language) }}</option>
-            <option value="light">{{ t('theme_light', config.settings.language) }}</option>
-          </select>
+      <div class="sidebar-foot">
+        <div class="privacy-card">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.4 2.8 8.4 7 10 4.2-1.6 7-5.6 7-10V6l-7-3Zm-3 9 2 2 4-5" /></svg>
+          <div><strong>100% Offline</strong><span>{{ t("offline") }}</span></div>
         </div>
-
-        <div class="setting-row">
-          <span>{{ t('lang_label', config.settings.language) }}</span>
-          <select v-model="config.settings.language" @change="saveConfig">
-            <option value="id">Indonesia</option>
-            <option value="en">English</option>
-          </select>
-        </div>
-
-        <div class="setting-row">
-          <span>{{ t('nav_auto_start', config.settings.language) }}</span>
-          <label class="switch">
-            <input type="checkbox" v-model="config.settings.auto_start" @change="toggleAutoStart" />
-            <span class="slider"></span>
-          </label>
-        </div>
-
-        <div class="setting-row">
-          <span>{{ t('nav_minimize_tray', config.settings.language) }}</span>
-          <label class="switch">
-            <input type="checkbox" v-model="config.settings.minimize_to_tray_on_close" @change="saveConfig" />
-            <span class="slider"></span>
-          </label>
-        </div>
-
-        <div class="separator"></div>
-
-        <div style="font-size: 11px; color: var(--fg-dim); text-align: center;">
-          {{ t('watermark_credit', config.settings.language) }}
-        </div>
-
-        <button class="btn btn-danger" style="margin-top: 6px; width: 100%; justify-content: center;" @click="quitApp">
-          <Icons name="power" size="14" />
-          {{ t('nav_quit', config.settings.language) }}
-        </button>
+        <span class="version-label">v2.0.0</span>
       </div>
     </aside>
 
-    <!-- Main Area -->
-    <main class="main-area">
-      <header class="top-bar">
-        <div class="nav-tabs">
-          <button class="tab-btn" :class="{ active: currentTab === 'dashboard' }" @click="currentTab = 'dashboard'">
-            <Icons name="dashboard" size="14" />
-            {{ t('nav_dashboard', config.settings.language) }}
+    <section class="workspace">
+      <header class="topbar">
+        <div><h1>{{ pageTitle }}</h1></div>
+        <div class="topbar-actions">
+          <button class="health-pill" :class="`health-pill--${monitoringTone}`" type="button" :aria-label="`${monitoringLabel}. Klik untuk mengubah status.`" @click="toggleMonitoring">
+            <span class="health-dot" />{{ monitoringLabel }}
           </button>
-          <button class="tab-btn" :class="{ active: currentTab === 'logs' }" @click="currentTab = 'logs'">
-            <Icons name="logs" size="14" />
-            {{ t('nav_logs', config.settings.language) }}
-          </button>
-          <button class="tab-btn" :class="{ active: currentTab === 'tutorial' }" @click="currentTab = 'tutorial'">
-            <Icons name="tutorial" size="14" />
-            {{ t('nav_tutorial', config.settings.language) }}
-          </button>
-          <button class="tab-btn" :class="{ active: currentTab === 'about' }" @click="currentTab = 'about'">
-            <Icons name="about" size="14" />
-            {{ t('nav_about', config.settings.language) }}
-          </button>
-        </div>
-
-        <div style="display: flex; gap: 8px;">
-          <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 11px;" @click="exportSettings">
-            <Icons name="export" size="13" />
-            {{ t('nav_export_settings', config.settings.language) }}
-          </button>
-          <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 11px;" @click="importSettings">
-            <Icons name="import" size="13" />
-            {{ t('nav_import_settings', config.settings.language) }}
+          <button class="button button--primary" type="button" @click="organizeNow">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h12M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none" /></svg>
+            {{ t("organizeNow") }}
           </button>
         </div>
       </header>
-
-      <div class="view-container">
-        <Dashboard
-          v-if="currentTab === 'dashboard'"
-          :rules="config.rules"
-          :history-count="config.history.length"
-          :lang="config.settings.language"
-          @toggle-rule="toggleRule"
-          @edit-rule="openEditRuleDialog"
-          @delete-rule="deleteRule"
-        />
-
-        <LogViewer
-          v-else-if="currentTab === 'logs'"
-          :logs="logs"
-          :history="config.history"
-          :lang="config.settings.language"
-          @clear-logs="logs = []"
-          @undo-move="onUndoMove"
-        />
-
-        <Tutorial
-          v-else-if="currentTab === 'tutorial'"
-          :lang="config.settings.language"
-        />
-
-        <About
-          v-else-if="currentTab === 'about'"
-          :lang="config.settings.language"
-        />
-      </div>
-    </main>
-
-    <!-- Rule Dialog Modal -->
-    <RuleDialog
-      v-if="showRuleDialog"
-      :rule="editingRule"
-      :lang="config.settings.language"
-      @save="onSaveRule"
-      @close="showRuleDialog = false"
-    />
+      <main id="main-content" class="page-content" tabindex="-1">
+        <RouterView />
+      </main>
+    </section>
   </div>
+
+  <PreviewModal />
+  <AppToastStack />
 </template>
-
-<script setup>
-import { ref, reactive, onMounted, onUnmounted, watch } from 'vue';
-import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
-import { open, save } from '@tauri-apps/plugin-dialog';
-import { enable, disable } from '@tauri-apps/plugin-autostart';
-import { sendNotification } from '@tauri-apps/plugin-notification';
-
-import { t } from './i18n.js';
-import Icons from './components/Icons.vue';
-import Toast from './components/Toast.vue';
-import Dashboard from './components/Dashboard.vue';
-import LogViewer from './components/LogViewer.vue';
-import Tutorial from './components/Tutorial.vue';
-import About from './components/About.vue';
-import RuleDialog from './components/RuleDialog.vue';
-
-const currentTab = ref('dashboard');
-const isProcessing = ref(false);
-const logs = ref([]);
-const showRuleDialog = ref(false);
-const editingRule = ref(null);
-const toasts = ref([]);
-const recentNotifs = new Set();
-
-let unlistenLogEvent = null;
-
-function showToast(message, type = 'success', duration = 3500) {
-  const id = Math.random().toString(36).substring(2, 9);
-  toasts.value.push({ id, message, type });
-  setTimeout(() => {
-    dismissToast(id);
-  }, duration);
-}
-
-function dismissToast(id) {
-  toasts.value = toasts.value.filter(t => t.id !== id);
-}
-
-function isDuplicateNotif(key, cooldownMs = 3000) {
-  if (recentNotifs.has(key)) return true;
-  recentNotifs.add(key);
-  setTimeout(() => {
-    recentNotifs.delete(key);
-  }, cooldownMs);
-  return false;
-}
-
-const config = reactive({
-  rules: [],
-  settings: {
-    auto_start: false,
-    minimize_to_tray_on_close: true,
-    theme: 'dark',
-    language: 'id'
-  },
-  history: []
-});
-
-watch(
-  () => config.settings.theme,
-  (newTheme) => {
-    document.documentElement.setAttribute('data-theme', newTheme);
-  },
-  { immediate: true }
-);
-
-onMounted(async () => {
-  await loadConfig();
-  
-  unlistenLogEvent = await listen('log-event', (event) => {
-    const time = new Date().toLocaleTimeString();
-    const payload = event.payload;
-    const formatted = `[${time}] ${payload}`;
-    logs.value.push(formatted);
-
-    if (typeof payload === 'string' && payload.includes('Moved:')) {
-      const match = payload.match(/\[(.*?)\] Moved: (.*?) -> "(.*?)"/);
-      if (match) {
-        const ruleName = match[1];
-        const filename = match[2];
-        const destPath = match[3];
-        
-        // Deduplicate fast consecutive notifications for the same file move
-        const notifKey = `${ruleName}:${filename}:${destPath}`;
-        if (isDuplicateNotif(notifKey, 3000)) return;
-
-        config.history.unshift({
-          id: Math.random().toString(36).substring(2, 9),
-          rule_name: ruleName,
-          src_path: filename,
-          dest_path: destPath,
-          timestamp: time
-        });
-
-        if (config.history.length > 50) config.history.pop();
-        saveConfig();
-
-        // Shortened path helper
-        const shortDest = destPath.length > 30 ? '…' + destPath.slice(-29) : destPath;
-
-        // In-App Toast Notification with Destination Details
-        showToast(`✨ [${ruleName}] Moved ${filename} ➔ ${shortDest}`, 'success');
-
-        // OS Windows Notification with Destination Details
-        sendNotification({
-          title: `✨ [${ruleName}] File Moved`,
-          body: `File: ${filename}\n➜ Target: ${destPath}`
-        }).catch(() => {});
-      }
-    } else if (typeof payload === 'string' && payload.includes('Manual organization')) {
-      if (!isDuplicateNotif(payload, 3000)) {
-        sendNotification({
-          title: '📁 Auto File Organizer',
-          body: payload
-        }).catch(() => {});
-      }
-    }
-  });
-});
-
-onUnmounted(() => {
-  if (unlistenLogEvent) unlistenLogEvent();
-});
-
-async function loadConfig() {
-  try {
-    const res = await invoke('get_config_cmd');
-    config.rules = res.rules || [];
-    config.settings = { ...config.settings, ...res.settings };
-    config.history = res.history || [];
-  } catch (err) {
-    console.error("Failed to load config:", err);
-  }
-}
-
-async function saveConfig() {
-  try {
-    await invoke('save_config_cmd', { config: { rules: config.rules, settings: config.settings, history: config.history } });
-  } catch (err) {
-    console.error("Failed to save config:", err);
-  }
-}
-
-async function onUndoMove(historyItem) {
-  try {
-    await invoke('undo_file_move_cmd', {
-      srcPath: historyItem.src_path,
-      destPath: historyItem.dest_path
-    });
-    config.history = config.history.filter(h => h.id !== historyItem.id);
-    await saveConfig();
-    showToast(`↩️ Undo successful! Restored to original folder.`, 'success');
-  } catch (err) {
-    showToast(`⚠️ Undo failed: ${err}`, 'error');
-  }
-}
-
-async function toggleRule(ruleId) {
-  const target = config.rules.find(r => r.id === ruleId);
-  if (target) {
-    target.enabled = !target.enabled;
-    await saveConfig();
-    showToast(target.enabled ? `Rule "${target.name}" activated` : `Rule "${target.name}" disabled`, 'info');
-  }
-}
-
-function openAddRuleDialog() {
-  editingRule.value = null;
-  showRuleDialog.value = true;
-}
-
-function openEditRuleDialog(rule) {
-  editingRule.value = { ...rule };
-  showRuleDialog.value = true;
-}
-
-async function onSaveRule(savedRule) {
-  if (editingRule.value) {
-    const idx = config.rules.findIndex(r => r.id === savedRule.id);
-    if (idx !== -1) config.rules[idx] = savedRule;
-    showToast(`Rule "${savedRule.name}" updated!`, 'success');
-  } else {
-    config.rules.push(savedRule);
-    showToast(`Rule "${savedRule.name}" added successfully!`, 'success');
-  }
-  showRuleDialog.value = false;
-  await saveConfig();
-}
-
-async function deleteRule(ruleId) {
-  const target = config.rules.find(r => r.id === ruleId);
-  config.rules = config.rules.filter(r => r.id !== ruleId);
-  await saveConfig();
-  showToast(`Rule "${target?.name || 'Rule'}" deleted`, 'error');
-}
-
-async function triggerManual() {
-  isProcessing.value = true;
-  try {
-    const moved = await invoke('run_manual_organize_cmd', { rules: config.rules });
-    const msg = `Manual organization done. ${moved} file(s) moved.`;
-    logs.value.push(`[${new Date().toLocaleTimeString()}] ${msg}`);
-    showToast(`🎉 Organization complete! ${moved} file(s) moved.`, 'success');
-  } catch (err) {
-    showToast(`⚠️ Organization failed: ${err}`, 'error');
-  } finally {
-    isProcessing.value = false;
-  }
-}
-
-async function toggleAutoStart() {
-  try {
-    if (config.settings.auto_start) {
-      await enable();
-      showToast("Auto-Start enabled for Windows startup!", 'success');
-    } else {
-      await disable();
-      showToast("Auto-Start disabled", 'info');
-    }
-  } catch (e) {
-    console.error("AutoStart plugin error:", e);
-  }
-  await saveConfig();
-}
-
-async function exportSettings() {
-  try {
-    const filePath = await save({
-      defaultPath: 'AutoFileOrganizer_Settings.json',
-      filters: [{ name: 'JSON', extensions: ['json'] }]
-    });
-    if (filePath) {
-      const data = JSON.stringify({ rules: config.rules, settings: config.settings }, null, 2);
-      const blob = new Blob([data], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'AutoFileOrganizer_Settings.json';
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast("Settings exported successfully!", 'success');
-    }
-  } catch (err) {
-    showToast("Failed to export settings", 'error');
-  }
-}
-
-async function importSettings() {
-  try {
-    const selected = await open({
-      multiple: false,
-      filters: [{ name: 'JSON', extensions: ['json'] }]
-    });
-    if (selected) {
-      const res = await fetch(`file://${selected}`);
-      const data = await res.json();
-      if (data.rules && data.settings) {
-        config.rules = data.rules;
-        config.settings = { ...config.settings, ...data.settings };
-        if (data.history) config.history = data.history;
-        await saveConfig();
-        showToast("Settings imported successfully!", 'success');
-      }
-    }
-  } catch (err) {
-    showToast("Failed to import settings", 'error');
-  }
-}
-
-async function quitApp() {
-  try {
-    await invoke('quit_app_cmd');
-  } catch {
-    window.close();
-  }
-}
-</script>

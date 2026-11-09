@@ -1,132 +1,114 @@
-# 📁 Auto File Organizer
+# Auto File Organizer
 
 <p align="center">
-  <img src="public/icon.png" width="100" height="100" alt="Auto File Organizer Logo" />
-  <br/>
-  <b>Ultra-lightweight, blazingly fast native automatic file organizer built with Tauri v2, Rust & Vue 3.</b>
-  <br/>
-  <i>Aplikasi pemilah file otomatis super ringan dan cepat ditenagai oleh Rust & Vue 3.</i>
+  <img src="public/icon.png" width="96" height="96" alt="Auto File Organizer logo" />
 </p>
 
----
+Aplikasi desktop Windows offline-first untuk memantau folder, menampilkan preview, lalu mengorganisasi file dengan rule yang dapat diaudit dan di-undo.
 
-## 🌐 Language Navigation / Navigasi Bahasa
-- [🇮🇩 Bahasa Indonesia](#-bahasa-indonesia)
-- [🇬🇧 English](#-english)
+> Status: rebuild v2 sedang berlangsung. Development build belum boleh dipakai pada file yang tidak memiliki backup sampai seluruh acceptance criteria dan smoke test rilis selesai.
 
----
+## Sasaran v2
 
-<a name="-bahasa-indonesia"></a>
-## 🇮🇩 Bahasa Indonesia
+- Rule berbasis banyak source folder, extension, glob nama, ukuran, priority, dan collision policy.
+- Preview/dry-run sebelum manual execution.
+- Watcher dengan dedupe, stability probe, retry/backoff, reconciliation, pause/resume, dan health state.
+- Safe same-volume serta cross-volume move.
+- Recovery-backed overwrite, persistent history, crash recovery, dan undo setelah restart.
+- Dashboard, Rules, Activity, Settings, tray, autostart, notifikasi, Bahasa Indonesia/English, serta theme System/Light/Dark.
+- SQLite lokal; tanpa akun, telemetry, API server, atau kebutuhan internet saat fungsi inti berjalan.
 
-### 📌 Tentang Aplikasi
-**Auto File Organizer** adalah aplikasi desktop native untuk Windows yang secara otomatis merapikan file di folder Anda (seperti *Downloads*, *Documents*, atau *Desktop*) secara real-time berdasarkan ekstensi, pola nama file, dan ukuran file.
+Detail lengkap terdapat pada [PRD v2](docs/PRD-Auto-Manage-Files-v2.md).
 
-### ✨ Fitur Utama
-- **⚡ Performa Native Super Ringan:** Menggunakan Rust di backend dengan pemakaian RAM sangat minim (~15–30 MB).
-- **📂 Pemantauan Real-Time (Folder Watcher):** Memantau folder secara latar belakang tanpa membebankan CPU.
-- **🎨 Tampilan Modern & Dwibahasa:** Mode Gelap (Dark) & Terang (Light) dengan pilihan bahasa Indonesia dan Inggris.
-- **↩️ Fitur Undo Pemindahan File:** Kembalikan file yang baru saja dipindahkan hanya dengan 1 klik dari tab Logs.
-- **🛡️ Penanganan Duplikat Fleksibel:** Pilihan aksi duplikat: *Auto-rename* (ganti nama otomatis), *Skip* (lewati), atau *Overwrite* (timpa).
-- **🎯 Filter Lanjutan:** Pengaturan pola nama wildcard (`Invoice_*`) dan batas ukuran file (Min / Max MB).
-- **📁 Drag & Drop Folder:** Tarik dan lepas folder dari Explorer langsung ke aplikasi.
-- **🔽 System Tray & Auto-Start:** Minimalkan ke System Tray saat ditutup dan opsi berjalan otomatis saat Windows menyala.
+## Prinsip keselamatan
 
----
+Frontend tidak memindahkan file secara langsung. Rust memvalidasi source/destination, membuat operation journal sebelum mutasi, memverifikasi destination sebelum menghapus source, dan menggunakan operation ID persisted untuk undo.
 
-### 📦 Cara Install & Menggunakan
+Saat hasil setelah crash ambigu, aplikasi harus menampilkan `NeedsReview`, bukan melaporkan sukses. Lihat [arsitektur](docs/architecture.md) dan [limitasi](docs/known-limitations.md).
 
-#### Cara 1: Mengunduh Installer / Portable `.exe` (Untuk Pengguna Langsung)
-1. Buka halaman **[Releases](https://github.com/S-Crocophim/Auto-Manage-Files/releases)** di GitHub.
-2. Unduh file rilis pilihan Anda:
-   - **Installer Setup (`.exe`)**: `Auto File Organizer_1.0.0_x64-setup.exe` (Jalankan dan ikuti wizard instalasi).
-   - **Portable Version (`.exe`)**: `AutoFileOrganizer-Portable.exe` (Bisa langsung dijalankan tanpa perlu install).
-3. Jalankan aplikasi, buka tab **Dashboard**, dan klik **Tambah Aturan** untuk mulai merapikan file Anda!
+## Teknologi
 
----
+- Tauri 2 desktop shell.
+- Rust untuk domain, persistence, watcher, dan filesystem operations.
+- Vue 3 + TypeScript strict + Vite untuk UI.
+- SQLite untuk rule, journal, history, recovery metadata, settings, dan migration.
+- NSIS current-user installer untuk Windows 10/11 x64.
 
-#### Cara 2: Menjalankan dari Source Code (Untuk Pengembang / Developer)
+## Prasyarat developer
 
-##### Prasyarat Sistem:
-- [Node.js](https://nodejs.org/) (v18+)
-- [Rust & Cargo](https://www.rust-lang.org/tools/install)
-- [C++ Build Tools for Visual Studio](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+- Windows 10/11 x64.
+- Node.js 24.14.1.
+- Rust 1.96.0 melalui rustup.
+- Visual Studio Build Tools: Desktop development with C++ dan Windows SDK.
+- WebView2 Runtime untuk development.
 
-##### Langkah-langkah:
-```bash
-# 1. Clone repository
+## Menjalankan dari source
+
+```powershell
 git clone https://github.com/S-Crocophim/Auto-Manage-Files.git
-cd Auto-Manage-Files
-
-# 2. Install dependensi Node.js
-npm install
-
-# 3. Jalankan aplikasi mode Development
-npm run tauri dev
-
-# 4. Build installer rilis (.exe)
-npx tauri build
+Set-Location Auto-Manage-Files
+npm ci
+npm run tauri -- dev
 ```
 
----
-<br/>
+Jangan memakai folder pribadi sebagai fixture test. Semua integration test filesystem wajib menggunakan temporary directory.
 
-<a name="-english"></a>
-## 🇬🇧 English
+## Quality gate
 
-### 📌 About The App
-**Auto File Organizer** is a native desktop application for Windows that automatically sorts files in your watched directories (like *Downloads*, *Documents*, or *Desktop*) in real-time based on file extensions, wildcard patterns, and file sizes.
+Jalankan pemeriksaan versi, frontend, Rust, dan Tauri production smoke build melalui satu skrip:
 
-### ✨ Key Features
-- **⚡ Blazingly Fast & Lightweight:** Powered by Rust backend with minimal memory footprint (~15–30 MB RAM).
-- **📂 Real-Time Folder Monitoring:** Background folder watcher that detects incoming files instantly without CPU overhead.
-- **🎨 Modern Bilingual Interface:** Clean dark & light mode with toggleable Indonesian and English language support.
-- **↩️ 1-Click Move Undo:** Revert recent file moves with a single click from the Activity Logs view.
-- **🛡️ Flexible Conflict Handling:** Choose between *Auto-rename*, *Skip*, or *Overwrite* for duplicate files.
-- **🎯 Advanced Filters:** Filter by filename wildcard patterns (`Invoice_*`) and file size bounds (Min / Max MB).
-- **📁 Drag & Drop Folder Support:** Drag folders directly from Windows Explorer into path inputs.
-- **🔽 System Tray & Auto-Start:** Minimizes to system tray on window close and optional launch on Windows startup.
-
----
-
-### 📦 Installation & Usage Guide
-
-#### Option 1: Downloading Ready-to-Use `.exe` (For End Users)
-1. Go to the **[Releases](https://github.com/S-Crocophim/Auto-Manage-Files/releases)** page on GitHub.
-2. Download your preferred binary:
-   - **Setup Installer (`.exe`)**: `Auto File Organizer_1.0.0_x64-setup.exe` (Run installer wizard).
-   - **Portable Version (`.exe`)**: `AutoFileOrganizer-Portable.exe` (Standalone executable, no setup required).
-3. Open the app, navigate to **Dashboard**, and click **Add Rule** to begin organizing files!
-
----
-
-#### Option 2: Building from Source (For Developers)
-
-##### Prerequisites:
-- [Node.js](https://nodejs.org/) (v18+)
-- [Rust & Cargo](https://www.rust-lang.org/tools/install)
-- [C++ Build Tools for Visual Studio](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
-
-##### Build Steps:
-```bash
-# 1. Clone the repository
-git clone https://github.com/S-Crocophim/Auto-Manage-Files.git
-cd Auto-Manage-Files
-
-# 2. Install Node dependencies
-npm install
-
-# 3. Run application in development mode
-npm run tauri dev
-
-# 4. Build production installer & executable (.exe)
-npx tauri build
+```powershell
+.\scripts\verify.ps1
 ```
 
----
+Untuk iterasi cepat tanpa desktop build, gunakan `-SkipDesktopBuild`. Gunakan `-Installer` untuk mengganti smoke build dengan NSIS unsigned build. Opsi tersebut tidak dapat digabungkan.
 
-## 📜 License & Credits
+Pull request ke `main` menjalankan gate yang sama pada GitHub Actions Windows.
 
-- **Author / Developer:** Px0 (`S-Crocophim`)
-- **Technologies:** [Tauri v2](https://tauri.app/), [Rust](https://www.rust-lang.org/), [Vue 3](https://vuejs.org/), [Vite](https://vitejs.dev/)
-- **License:** MIT License
+## Packaging offline
+
+Installer standard:
+
+```powershell
+npm run tauri -- build --bundles nsis --ci --no-sign -- --locked
+```
+
+Installer air-gapped yang membawa WebView2 offline installer:
+
+```powershell
+npm run tauri -- build --bundles nsis --config src-tauri/tauri.offline.conf.json --ci --no-sign -- --locked
+```
+
+Runtime offline, installer offline, dan build source offline adalah jaminan berbeda. Fungsi inti ditargetkan tanpa network; flavor airgap dapat dipasang tanpa network; build source tetap membutuhkan dependency npm/crates kecuali dependency divendor terpisah.
+
+## Struktur repository
+
+```text
+.github/workflows/       CI dan release tag
+src/                     Vue + TypeScript presentation
+src-tauri/src/           Rust application, domain, dan adapters
+src-tauri/capabilities/  Tauri capability allowlist
+src-tauri/migrations/    SQLite migration
+scripts/                 pemeriksaan repository/build
+docs/                    PRD, arsitektur, ADR, security, release
+```
+
+## Dokumentasi
+
+- [PRD v2](docs/PRD-Auto-Manage-Files-v2.md)
+- [Arsitektur](docs/architecture.md)
+- [Build dan release](docs/build-and-release.md)
+- [Security dan privacy](docs/security-and-privacy.md)
+- [Limitasi dan release blockers](docs/known-limitations.md)
+- [Architecture Decision Records](docs/adr/)
+- [Panduan kontribusi](CONTRIBUTING.md)
+
+## Privacy
+
+Data rule, settings, operation journal, history, log, dan recovery disimpan lokal pada profile pengguna. Tidak ada telemetry atau upload otomatis. Support bundle hanya dibuat dan dibagikan melalui aksi eksplisit pengguna.
+
+## Release
+
+Tag harus berbentuk `v<SemVer>` dan sama dengan versi npm, Cargo, serta Tauri. Workflow membangun installer standard dan airgap serta SHA-256.
+
+Selama code signing belum dikonfigurasi, workflow hanya membuat draft artifact yang secara eksplisit bernama `UNSIGNED`. Artifact tersebut untuk internal testing, bukan public stable release.

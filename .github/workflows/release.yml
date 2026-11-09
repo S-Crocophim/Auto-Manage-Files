@@ -1,0 +1,178 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  NODE_VERSION: 24.14.1
+  RUST_VERSION: 1.96.0
+
+jobs:
+  validate:
+    name: Validate release tag and quality gates
+    runs-on: windows-2025
+    timeout-minutes: 40
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install pinned Rust toolchain
+        shell: pwsh
+        run: rustup toolchain install $env:RUST_VERSION --profile minimal --component rustfmt --component clippy
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Audit dependency vulnerabilities
+        run: npm audit --audit-level=high
+
+      - name: Verify tag and product versions
+        run: node scripts/check-version.mjs --release --tag $env:GITHUB_REF_NAME
+
+      - name: Run frontend quality gates
+        run: npm run check
+
+      - name: Check Rust formatting
+        working-directory: src-tauri
+        run: cargo fmt --all -- --check
+
+      - name: Run Clippy with warnings denied
+        working-directory: src-tauri
+        run: cargo clippy --all-targets --all-features --locked -- -D warnings
+
+      - name: Run Rust tests
+        working-directory: src-tauri
+        run: cargo test --all-features --locked
+
+  build-installers:
+    name: Build ${{ matrix.flavor }} NSIS installer
+    needs: validate
+    runs-on: windows-2025
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        flavor: [standard, airgap]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install pinned Rust toolchain
+        shell: pwsh
+        run: rustup toolchain install $env:RUST_VERSION --profile minimal
+
+      - name: Cache Cargo data
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-release-${{ env.RUST_VERSION }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build standard NSIS installer
+        if: matrix.flavor == 'standard'
+        run: npm run tauri -- build --bundles nsis --ci --no-sign -- --locked
+
+      - name: Build air-gapped NSIS installer
+        if: matrix.flavor == 'airgap'
+        run: npm run tauri -- build --bundles nsis --config src-tauri/tauri.offline.conf.json --ci --no-sign -- --locked
+
+      - name: Stage installer and checksum
+        shell: pwsh
+        env:
+          BUILD_FLAVOR: ${{ matrix.flavor }}
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $installer = Get-ChildItem 'src-tauri/target/release/bundle/nsis/*-setup.exe' |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+          if (-not $installer) {
+            throw 'NSIS installer was not produced.'
+          }
+
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          $name = "Auto-File-Organizer_${version}_windows-x64_${env:BUILD_FLAVOR}_UNSIGNED.exe"
+          $destination = Join-Path artifacts $name
+          Copy-Item -LiteralPath $installer.FullName -Destination $destination
+          $digest = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$digest  $name" | Set-Content -LiteralPath "$destination.sha256" -Encoding utf8
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-${{ matrix.flavor }}-unsigned
+          path: artifacts/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  publish-draft:
+    name: Publish unsigned draft release
+    needs: build-installers
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - name: Download installers
+        uses: actions/download-artifact@v7
+        with:
+          pattern: windows-*-unsigned
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create combined SHA-256 manifest
+        shell: pwsh
+        run: |
+          $entries = Get-ChildItem artifacts -Filter '*.sha256' |
+            ForEach-Object { Get-Content -LiteralPath $_.FullName } |
+            Sort-Object
+          $entries | Set-Content -LiteralPath artifacts/SHA256SUMS.txt -Encoding utf8NoBOM
+
+      - name: Create or update draft GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $assets = Get-ChildItem artifacts -File | ForEach-Object { $_.FullName }
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag @assets --clobber
+          } else {
+            gh release create $tag @assets `
+              --verify-tag `
+              --draft `
+              --generate-notes `
+              --title "Auto File Organizer $tag - UNSIGNED INTERNAL BUILD"
+          }

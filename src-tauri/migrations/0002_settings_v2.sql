@@ -1,0 +1,10 @@
+BEGIN IMMEDIATE;
+
+ALTER TABLE settings ADD COLUMN history_retention_days INTEGER NOT NULL DEFAULT 30;
+ALTER TABLE settings ADD COLUMN stability_window_ms INTEGER NOT NULL DEFAULT 1500;
+ALTER TABLE settings ADD COLUMN preview_before_manual INTEGER NOT NULL DEFAULT 1;
+
+INSERT OR IGNORE INTO schema_migrations(version, applied_at)
+VALUES (2, CURRENT_TIMESTAMP);
+
+COMMIT;
